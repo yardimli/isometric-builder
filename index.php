@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Game Editor Engine v1.5</title>
+	<title>Game Editor Engine v1.6</title>
 	<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -29,8 +29,15 @@
 
 	<!-- Main Workspace -->
 	<div class="workspace">
-		<div class="canvas-wrapper">
+		<div class="canvas-wrapper" id="canvas-wrapper">
 			<canvas id="gameCanvas"></canvas>
+		</div>
+
+		<!-- Zoom Controls -->
+		<div class="zoom-controls">
+			<button id="btn-zoom-out" title="Zoom Out">-</button>
+			<input type="text" id="inp-zoom-percent" value="100%">
+			<button id="btn-zoom-in" title="Zoom In">+</button>
 		</div>
 
 		<!-- Properties Panel -->

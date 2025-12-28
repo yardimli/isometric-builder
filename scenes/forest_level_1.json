@@ -1,9 +1,9 @@
 {
   "meta": {
     "version": "1.2",
-    "sceneName": "Forest_Level_1",
-    "width": 1280,
-    "height": 720,
+    "sceneName": "forest_level_1",
+    "width": 720,
+    "height": 1280,
     "backgroundColor": "#87CEEB",
     "backgroundImage": "assets/environment/sky_tiled.png",
     "backgroundMode": "tile",
@@ -111,6 +111,20 @@
       "width": 32,
       "height": 32,
       "opacity": 0.9,
+      "zIndex": 5,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1766932119929",
+      "name": "New Object",
+      "type": "static",
+      "asset": "assets/background/empty.png",
+      "x": 0,
+      "y": 192,
+      "width": 1536,
+      "height": 2784,
+      "opacity": 1,
       "zIndex": 5,
       "visible": true,
       "locked": false

@@ -46,17 +46,62 @@ body {
 .controls label { font-size: 12px; margin-left: 10px; cursor: pointer; user-select: none; }
 
 /* Workspace */
-.workspace { display: flex; flex: 1; overflow: hidden; }
+.workspace { display: flex; flex: 1; overflow: hidden; position: relative; }
+
 .canvas-wrapper {
     flex: 1;
     background-color: #333;
-    overflow: auto;
+    overflow: auto; /* Scrollbars appear here */
     display: flex;
+    /* Center alignment is handled via margins in JS when zoomed, or flex here */
     justify-content: center;
     align-items: center;
     padding: 20px;
+    position: relative;
 }
-canvas { box-shadow: 0 0 20px rgba(0,0,0,0.5); background: #fff; }
+
+canvas {
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    background: #fff;
+    transform-origin: top left; /* Important for CSS zooming if used, though we use style width/height */
+}
+
+/* Zoom Controls */
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 5px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    z-index: 50;
+}
+
+.zoom-controls button {
+    background: #444;
+    border: none;
+    color: white;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    border-radius: 2px;
+}
+.zoom-controls button:hover { background: #555; }
+
+.zoom-controls input {
+    width: 50px;
+    background: #1e1e1e;
+    border: 1px solid #444;
+    color: white;
+    text-align: center;
+    font-size: 12px;
+    padding: 2px;
+}
 
 /* Properties Panel */
 .properties-panel {

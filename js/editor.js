@@ -1,12 +1,13 @@
 /**
  * editor.js
- * Handles the Canvas, Game Loop, Object Interaction, and Properties Panel.
+ * Handles the Canvas, Game Loop, Object Interaction, Properties Panel, Zoom, and Resizing.
  */
 
 window.Editor = {
 	canvas: null,
 	ctx: null,
 	propPanel: null,
+	wrapper: null,
 	
 	// State
 	data: null,
@@ -18,10 +19,32 @@ window.Editor = {
 	lastTime: 0,
 	animState: {},
 	
+	// Zoom State
+	zoom: 1.0,
+	
+	// Resize State
+	resizingHandle: null, // 'tl', 'tr', 'bl', 'br' or null
+	resizeStart: { x: 0, y: 0, w: 0, h: 0, mx: 0, my: 0 },
+	
+	// Constants
+	HANDLE_SIZE: 10, // Visual size of handles in pixels
+	
+	// Scene Presets
+	resolutions: {
+		'Custom': { w: 0, h: 0 },
+		'iPhone 14 Pro': { w: 1179, h: 2556 },
+		'Pixel 7': { w: 1080, h: 2400 },
+		'iPad Pro 12.9': { w: 2048, h: 2732 },
+		'HD Desktop': { w: 1920, h: 1080 },
+		'FHD Portrait': { w: 1080, h: 1920 },
+		'4K Desktop': { w: 3840, h: 2160 }
+	},
+	
 	init: function () {
 		this.canvas = document.getElementById('gameCanvas');
 		this.ctx = this.canvas.getContext('2d');
 		this.propPanel = document.getElementById('prop-content');
+		this.wrapper = document.getElementById('canvas-wrapper');
 		
 		// UI Listeners
 		document.getElementById('btn-play').onclick = () => { this.isPlaying = true; };
@@ -33,6 +56,14 @@ window.Editor = {
 		};
 		document.getElementById('chk-grid-snap').onchange = (e) => {
 			if (this.data) this.data.meta.grid.snap = e.target.checked;
+		};
+		
+		// Zoom Controls
+		document.getElementById('btn-zoom-in').onclick = () => this.setZoom(this.zoom + 0.1);
+		document.getElementById('btn-zoom-out').onclick = () => this.setZoom(this.zoom - 0.1);
+		document.getElementById('inp-zoom-percent').onchange = (e) => {
+			const val = parseFloat(e.target.value);
+			if (!isNaN(val)) this.setZoom(val / 100);
 		};
 		
 		// Scene Properties Button
@@ -47,9 +78,12 @@ window.Editor = {
 		};
 		
 		// Canvas Interaction
+		// mousedown remains on canvas to start interaction
 		this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-		this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-		this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
+		
+		// mousemove and mouseup are attached to window to track dragging outside canvas
+		window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+		window.addEventListener('mouseup', () => this.handleMouseUp());
 		
 		// Close Modals Logic (Generic)
 		document.querySelectorAll('.close').forEach(span => {
@@ -84,7 +118,37 @@ window.Editor = {
 		this.selectedId = 'scene';
 		this.updatePropertiesPanel();
 		
+		// Initial Zoom: Fit to Screen
+		this.fitZoomToScreen();
+		
 		this.loadAssets();
+	},
+	
+	// --- Zoom Logic ---
+	
+	setZoom: function (val) {
+		this.zoom = Math.max(0.1, Math.min(5.0, val)); // Clamp 10% to 500%
+		
+		// We control zoom by setting CSS width/height, keeping internal resolution same
+		this.canvas.style.width = (this.data.meta.width * this.zoom) + 'px';
+		this.canvas.style.height = (this.data.meta.height * this.zoom) + 'px';
+		
+		document.getElementById('inp-zoom-percent').value = Math.round(this.zoom * 100) + '%';
+	},
+	
+	fitZoomToScreen: function () {
+		if (!this.wrapper || !this.data) return;
+		const availW = this.wrapper.clientWidth - 40; // Padding
+		const availH = this.wrapper.clientHeight - 40;
+		
+		const scaleW = availW / this.data.meta.width;
+		const scaleH = availH / this.data.meta.height;
+		
+		// Fit entire scene
+		let newZoom = Math.min(scaleW, scaleH);
+		if (newZoom > 1) newZoom = 1; // Don't zoom in if it fits, optional
+		
+		this.setZoom(newZoom);
 	},
 	
 	// --- Asset Loading ---
@@ -214,9 +278,15 @@ window.Editor = {
 				this.drawSprite(obj);
 			}
 			
+			// Selection Outline
 			if (this.selectedId === obj.id) {
 				this.ctx.strokeStyle = '#00FF00'; this.ctx.lineWidth = 2;
 				this.ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
+				
+				// Draw Resize Handles
+				if (!obj.locked) {
+					this.drawResizeHandles(obj);
+				}
 			}
 			this.ctx.restore();
 		});
@@ -247,16 +317,70 @@ window.Editor = {
 		this.ctx.stroke();
 	},
 	
+	drawResizeHandles: function (obj) {
+		// Calculate handle size based on zoom so they stay constant visually
+		const s = this.HANDLE_SIZE / this.zoom;
+		this.ctx.fillStyle = '#fff';
+		this.ctx.strokeStyle = '#000';
+		this.ctx.lineWidth = 1;
+		
+		const handles = this.getHandleCoords(obj);
+		
+		for (let key in handles) {
+			const h = handles[key];
+			this.ctx.fillRect(h.x, h.y, h.w, h.h);
+			this.ctx.strokeRect(h.x, h.y, h.w, h.h);
+		}
+	},
+	
+	getHandleCoords: function (obj) {
+		const s = this.HANDLE_SIZE / this.zoom;
+		return {
+			tl: { x: obj.x - s / 2, y: obj.y - s / 2, w: s, h: s },
+			tr: { x: obj.x + obj.width - s / 2, y: obj.y - s / 2, w: s, h: s },
+			bl: { x: obj.x - s / 2, y: obj.y + obj.height - s / 2, w: s, h: s },
+			br: { x: obj.x + obj.width - s / 2, y: obj.y + obj.height - s / 2, w: s, h: s }
+		};
+	},
+	
 	// --- Interaction ---
 	
 	getMousePos: function (e) {
 		const r = this.canvas.getBoundingClientRect();
-		return { x: (e.clientX - r.left) * (this.canvas.width / r.width), y: (e.clientY - r.top) * (this.canvas.height / r.height) };
+		// Adjust for Zoom
+		const scaleX = this.canvas.width / r.width;
+		const scaleY = this.canvas.height / r.height;
+		return {
+			x: (e.clientX - r.left) * scaleX,
+			y: (e.clientY - r.top) * scaleY
+		};
 	},
 	
 	handleMouseDown: function (e) {
+		e.preventDefault(); // Prevent default browser drag/select
 		if (!this.data) return;
 		const pos = this.getMousePos(e);
+		
+		// Check Resize Handles first if object selected
+		if (this.selectedId && this.selectedId !== 'scene') {
+			const obj = this.data.objects.find(o => o.id === this.selectedId);
+			if (obj && !obj.locked) {
+				const handles = this.getHandleCoords(obj);
+				for (let key in handles) {
+					const h = handles[key];
+					if (pos.x >= h.x && pos.x <= h.x + h.w && pos.y >= h.y && pos.y <= h.y + h.h) {
+						this.resizingHandle = key;
+						this.resizeStart = {
+							x: obj.x, y: obj.y, w: obj.width, h: obj.height,
+							mx: pos.x, my: pos.y
+						};
+						return; // Stop propagation
+					}
+				}
+			}
+		}
+		
+		// Check Object Selection
 		const sorted = [...this.data.objects].sort((a, b) => b.zIndex - a.zIndex);
 		const clicked = sorted.find(o => pos.x >= o.x && pos.x <= o.x + o.width && pos.y >= o.y && pos.y <= o.y + o.height);
 		
@@ -274,8 +398,57 @@ window.Editor = {
 	},
 	
 	handleMouseMove: function (e) {
-		if (!this.isDragging || !this.selectedId || this.selectedId === 'scene') return;
 		const pos = this.getMousePos(e);
+		
+		// Handle Resizing
+		if (this.resizingHandle) {
+			const obj = this.data.objects.find(o => o.id === this.selectedId);
+			if (!obj) return;
+			
+			const dx = pos.x - this.resizeStart.mx;
+			// Calculate aspect ratio
+			const ratio = this.resizeStart.w / this.resizeStart.h;
+			
+			let newW = this.resizeStart.w;
+			let newH = this.resizeStart.h;
+			let newX = this.resizeStart.x;
+			let newY = this.resizeStart.y;
+			
+			// Simple aspect ratio resizing logic based on corner
+			// We use dx (horizontal drag) as the primary driver for simplicity
+			
+			if (this.resizingHandle === 'br') {
+				newW = this.resizeStart.w + dx;
+				newH = newW / ratio;
+			} else if (this.resizingHandle === 'bl') {
+				newW = this.resizeStart.w - dx;
+				newH = newW / ratio;
+				newX = this.resizeStart.x + dx;
+			} else if (this.resizingHandle === 'tr') {
+				newW = this.resizeStart.w + dx;
+				newH = newW / ratio;
+				newY = this.resizeStart.y - (newH - this.resizeStart.h);
+			} else if (this.resizingHandle === 'tl') {
+				newW = this.resizeStart.w - dx;
+				newH = newW / ratio;
+				newX = this.resizeStart.x + dx;
+				newY = this.resizeStart.y - (newH - this.resizeStart.h);
+			}
+			
+			// Minimum size check
+			if (newW > 10 && newH > 10) {
+				obj.width = newW;
+				obj.height = newH;
+				obj.x = newX;
+				obj.y = newY;
+				this.updatePropertiesPanel();
+			}
+			return;
+		}
+		
+		// Handle Dragging
+		if (!this.isDragging || !this.selectedId || this.selectedId === 'scene') return;
+		
 		const obj = this.data.objects.find(o => o.id === this.selectedId);
 		if (!obj) return;
 		
@@ -292,16 +465,30 @@ window.Editor = {
 		this.updatePropertiesPanel();
 	},
 	
-	handleMouseUp: function () { this.isDragging = false; },
+	handleMouseUp: function () {
+		this.isDragging = false;
+		this.resizingHandle = null;
+	},
 	
 	updatePropertiesPanel: function () {
 		if (!this.data) return;
 		
 		if (this.selectedId === 'scene') {
 			const meta = this.data.meta;
+			
+			// Build Preset Options
+			let presetOpts = '';
+			for (let name in this.resolutions) {
+				presetOpts += `<option value="${name}">${name}</option>`;
+			}
+			
 			const html = `
         <h4>Scene Properties</h4>
         <div class="prop-row"><label>Name</label><input value="${meta.sceneName}" onchange="Editor.updateSceneProp('sceneName', this.value)"></div>
+        <div class="prop-row">
+            <label>Preset Size</label>
+            <select onchange="Editor.applyResolutionPreset(this.value)">${presetOpts}</select>
+        </div>
         <div class="prop-row"><label>Width</label><input type="number" value="${meta.width}" onchange="Editor.updateSceneProp('width', Number(this.value))"></div>
         <div class="prop-row"><label>Height</label><input type="number" value="${meta.height}" onchange="Editor.updateSceneProp('height', Number(this.value))"></div>
         <div class="prop-row"><label>Bg Color</label><input type="color" value="${meta.backgroundColor}" onchange="Editor.updateSceneProp('backgroundColor', this.value)"></div>
@@ -318,10 +505,11 @@ window.Editor = {
       <h4>Object Properties</h4>
       <div class="prop-row"><label>ID</label><input id="inp-id" value="${obj.id}" disabled></div>
       <div class="prop-row"><label>Name</label><input value="${obj.name}" onchange="Editor.updateProp('${obj.id}', 'name', this.value)"></div>
-      <div class="prop-row"><label>X</label><input type="number" id="inp-x" value="${obj.x}" onchange="Editor.updateProp('${obj.id}', 'x', Number(this.value))"></div>
-      <div class="prop-row"><label>Y</label><input type="number" id="inp-y" value="${obj.y}" onchange="Editor.updateProp('${obj.id}', 'y', Number(this.value))"></div>
-      <div class="prop-row"><label>W</label><input type="number" value="${obj.width}" onchange="Editor.updateProp('${obj.id}', 'width', Number(this.value))"></div>
-      <div class="prop-row"><label>H</label><input type="number" value="${obj.height}" onchange="Editor.updateProp('${obj.id}', 'height', Number(this.value))"></div>
+      <div class="prop-row"><button class="primary-btn" style="width:100%" onclick="Editor.fitObjectToScene('${obj.id}')">Fit to Scene</button></div>
+      <div class="prop-row"><label>X</label><input type="number" id="inp-x" value="${Math.round(obj.x)}" onchange="Editor.updateProp('${obj.id}', 'x', Number(this.value))"></div>
+      <div class="prop-row"><label>Y</label><input type="number" id="inp-y" value="${Math.round(obj.y)}" onchange="Editor.updateProp('${obj.id}', 'y', Number(this.value))"></div>
+      <div class="prop-row"><label>W</label><input type="number" value="${Math.round(obj.width)}" onchange="Editor.updateProp('${obj.id}', 'width', Number(this.value))"></div>
+      <div class="prop-row"><label>H</label><input type="number" value="${Math.round(obj.height)}" onchange="Editor.updateProp('${obj.id}', 'height', Number(this.value))"></div>
       <div class="prop-row"><label>Opacity</label><input type="number" step="0.1" min="0" max="1" value="${obj.opacity}" onchange="Editor.updateProp('${obj.id}', 'opacity', Number(this.value))"></div>
       <div class="prop-row"><label>Z-Index</label><input type="number" value="${obj.zIndex}" onchange="Editor.updateProp('${obj.id}', 'zIndex', Number(this.value))"></div>
     `;
@@ -340,8 +528,50 @@ window.Editor = {
 		} else {
 			this.data.meta[key] = val;
 		}
-		if (key === 'width') this.canvas.width = val;
-		if (key === 'height') this.canvas.height = val;
+		if (key === 'width') {
+			this.canvas.width = val;
+			this.setZoom(this.zoom); // Refresh CSS size
+		}
+		if (key === 'height') {
+			this.canvas.height = val;
+			this.setZoom(this.zoom);
+		}
+	},
+	
+	applyResolutionPreset: function (name) {
+		const res = this.resolutions[name];
+		if (res && res.w > 0) {
+			this.updateSceneProp('width', res.w);
+			this.updateSceneProp('height', res.h);
+			this.updatePropertiesPanel();
+			this.fitZoomToScreen(); // Auto fit when changing resolution
+		}
+	},
+	
+	fitObjectToScene: function (id) {
+		const obj = this.data.objects.find(o => o.id === id);
+		if (!obj) return;
+		
+		const sceneW = this.data.meta.width;
+		const sceneH = this.data.meta.height;
+		const objRatio = obj.width / obj.height;
+		const sceneRatio = sceneW / sceneH;
+		
+		// Determine fit based on aspect ratios
+		if (objRatio > sceneRatio) {
+			// Object is wider than scene relative to height -> Fit to Width
+			obj.width = sceneW;
+			obj.height = sceneW / objRatio;
+			obj.x = 0;
+			obj.y = (sceneH - obj.height) / 2; // Center Y
+		} else {
+			// Object is taller -> Fit to Height
+			obj.height = sceneH;
+			obj.width = sceneH * objRatio;
+			obj.y = 0;
+			obj.x = (sceneW - obj.width) / 2; // Center X
+		}
+		this.updatePropertiesPanel();
 	}
 };
 
