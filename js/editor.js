@@ -40,7 +40,7 @@ window.Editor = {
 		document.getElementById('btn-play').onclick = () => { this.isPlaying = true; };
 		document.getElementById('btn-pause').onclick = () => { this.isPlaying = false; };
 
-		// History Actions (New)
+		// History Actions
 		document.getElementById('btn-undo').onclick = () => window.History.undo();
 		document.getElementById('btn-redo').onclick = () => window.History.redo();
 
@@ -146,12 +146,10 @@ window.Editor = {
 		this.animState = {};
 		this.selectedId = 'scene';
 
-		// Reset History on load (New)
 		window.History.undoStack = [];
 		window.History.redoStack = [];
 		window.History.updateButtons();
 
-		// Refresh UI (Modified to use PropertiesPanel)
 		window.PropertiesPanel.update();
 		window.Treeview.render();
 		this.fitZoomToScreen();
@@ -202,7 +200,6 @@ window.Editor = {
 	addAssetToScene: function (assetPath) {
 		if (!this.data) return;
 
-		// Save state before mutation (New)
 		window.History.saveState();
 
 		let parentId = null;
@@ -211,9 +208,20 @@ window.Editor = {
 			parentId = (selected.type === 'folder') ? selected.id : selected.parentId;
 		}
 
+		// MODIFIED: Generate unique name based on filename
+		const fileName = assetPath.split('/').pop().replace(/\.[^/.]+$/, "");
+		let uniqueName = fileName;
+		let suffix = 1;
+
+		// Check if name exists and append numeric suffix until unique
+		while (this.data.objects.some(o => o.name === uniqueName)) {
+			uniqueName = `${fileName}_${suffix}`;
+			suffix++;
+		}
+
 		const newObj = {
 			id: 'obj_' + Date.now(),
-			name: 'New Object',
+			name: uniqueName, // NEW: Uses unique filename-based name
 			type: 'static',
 			asset: assetPath,
 			parentId: parentId,
@@ -236,7 +244,6 @@ window.Editor = {
 			this.data.objects.push(newObj);
 			this.selectedId = newObj.id;
 
-			// Refresh UI (Modified)
 			window.PropertiesPanel.update();
 			window.Treeview.render();
 			document.getElementById('modal-assets').style.display = 'none';
@@ -384,7 +391,7 @@ window.Editor = {
 				for (const key in handles) {
 					const h = handles[key];
 					if (pos.x >= h.x && pos.x <= h.x + h.w && pos.y >= h.y && pos.y <= h.y + h.h) {
-						window.History.saveState(); // Save state before resize (New)
+						window.History.saveState();
 						this.resizingHandle = key;
 						this.resizeStart = { x: obj.x, y: obj.y, w: obj.width, h: obj.height, mx: pos.x, my: pos.y };
 						return;
@@ -393,14 +400,18 @@ window.Editor = {
 			}
 		}
 
-		// Check Object Selection
-		const sorted = [...this.data.objects].sort((a, b) => b.zIndex - a.zIndex);
-		const clicked = sorted.find(o => o.type !== 'folder' && pos.x >= o.x && pos.x <= o.x + o.width && pos.y >= o.y && pos.y <= o.y + o.height);
+		// MODIFIED: Check Object Selection with Z-Index, Visibility, and Lock priority
+		const sorted = [...this.data.objects]
+			.filter(o => o.visible && !o.locked && o.type !== 'folder') // NEW: Filter out hidden/locked/folders
+			.sort((a, b) => b.zIndex - a.zIndex); // NEW: Highest Z-index first
+
+		const clicked = sorted.find(o => pos.x >= o.x && pos.x <= o.x + o.width && pos.y >= o.y && pos.y <= o.y + o.height);
 
 		if (clicked) {
 			this.selectedId = clicked.id;
+			// Note: Filter already handles !locked, but we keep the safety check
 			if (!clicked.locked) {
-				window.History.saveState(); // Save state before drag (New)
+				window.History.saveState();
 				this.isDragging = true;
 				this.dragOffset = { x: pos.x - clicked.x, y: pos.y - clicked.y };
 			}
@@ -408,7 +419,6 @@ window.Editor = {
 			this.selectedId = 'scene';
 		}
 
-		// Refresh UI (Modified)
 		window.PropertiesPanel.update();
 		window.Treeview.render();
 	},
@@ -446,7 +456,7 @@ window.Editor = {
 
 			if (newW > 5 && newH > 5) {
 				obj.width = newW; obj.height = newH; obj.x = newX; obj.y = newY;
-				window.PropertiesPanel.update(); // Modified
+				window.PropertiesPanel.update();
 			}
 			return;
 		}
@@ -462,7 +472,7 @@ window.Editor = {
 			ny = Math.round(ny / sz) * sz;
 		}
 		obj.x = nx; obj.y = ny;
-		window.PropertiesPanel.update(); // Modified
+		window.PropertiesPanel.update();
 	},
 
 	handleMouseUp: function () {
@@ -476,7 +486,7 @@ window.Editor = {
 		const obj = this.data.objects.find(o => o.id === id);
 		if (!obj || obj.type === 'folder') return;
 
-		window.History.saveState(); // Save state (New)
+		window.History.saveState();
 
 		const sceneW = this.data.meta.width;
 		const sceneH = this.data.meta.height;
@@ -490,7 +500,7 @@ window.Editor = {
 			obj.height = sceneH; obj.width = sceneH * objRatio;
 			obj.y = 0; obj.x = (sceneW - obj.width) / 2;
 		}
-		window.PropertiesPanel.update(); // Modified
+		window.PropertiesPanel.update();
 	},
 
 	deleteObject: async function (id) {
@@ -498,10 +508,10 @@ window.Editor = {
 		if (index !== -1) {
 			const confirmed = await this.confirm('Are you sure you want to delete this?');
 			if (confirmed) {
-				window.History.saveState(); // Save state (New)
+				window.History.saveState();
 				this.data.objects.splice(index, 1);
 				this.selectedId = 'scene';
-				window.PropertiesPanel.update(); // Modified
+				window.PropertiesPanel.update();
 				window.Treeview.render();
 			}
 		}

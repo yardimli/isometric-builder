@@ -1,5 +1,6 @@
 /**
  * js/treeview.js
+ * Handles the hierarchical display of scene objects and folders.
  */
 
 window.Treeview = {
@@ -75,7 +76,8 @@ window.Treeview = {
 
         el.onclick = () => {
             window.Editor.selectedId = obj.id;
-            window.Editor.updatePropertiesPanel();
+            // MODIFIED: Correctly call the PropertiesPanel update method
+            window.PropertiesPanel.update();
             this.render();
         };
 
@@ -134,7 +136,8 @@ window.Treeview = {
             draggedObj.parentId = targetObj.parentId;
         }
 
-        window.Editor.updatePropertiesPanel();
+        // MODIFIED: Update properties panel after moving items
+        window.PropertiesPanel.update();
         this.render();
     },
 
@@ -174,7 +177,8 @@ window.Treeview = {
         window.Editor.data.objects.push(newFolder);
         window.Editor.selectedId = newFolder.id;
         this.render();
-        window.Editor.updatePropertiesPanel();
+        // MODIFIED: Update properties panel when a new folder is selected
+        window.PropertiesPanel.update();
     }
 };
 
