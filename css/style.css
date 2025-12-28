@@ -45,15 +45,53 @@ body {
 
 .controls label { font-size: 12px; margin-left: 10px; cursor: pointer; user-select: none; }
 
-/* Workspace */
+/* Workspace Layout */
 .workspace { display: flex; flex: 1; overflow: hidden; position: relative; }
 
+/* Treeview Panel (New) */
+.treeview-panel {
+    width: 220px;
+    background-color: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.treeview-header {
+    padding: 10px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    color: #888;
+}
+
+.treeview-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tree-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #2d2d2d;
+}
+
+.tree-item:hover { background: #2a2d2e; }
+.tree-item.selected { background: #37373d; color: #fff; box-shadow: inset 3px 0 0 var(--accent); }
+.tree-item.scene-root { font-weight: bold; color: var(--accent); }
+
+/* Canvas Area */
 .canvas-wrapper {
     flex: 1;
     background-color: #333;
-    overflow: auto; /* Scrollbars appear here */
+    overflow: auto;
     display: flex;
-    /* Center alignment is handled via margins in JS when zoomed, or flex here */
     justify-content: center;
     align-items: center;
     padding: 20px;
@@ -63,14 +101,14 @@ body {
 canvas {
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
     background: #fff;
-    transform-origin: top left; /* Important for CSS zooming if used, though we use style width/height */
+    transform-origin: top left;
 }
 
 /* Zoom Controls */
 .zoom-controls {
     position: absolute;
     bottom: 20px;
-    left: 20px;
+    left: 240px; /* Adjusted for treeview */
     background-color: var(--bg-panel);
     border: 1px solid var(--border);
     padding: 5px;
@@ -91,7 +129,6 @@ canvas {
     cursor: pointer;
     border-radius: 2px;
 }
-.zoom-controls button:hover { background: #555; }
 
 .zoom-controls input {
     width: 50px;
@@ -100,7 +137,6 @@ canvas {
     color: white;
     text-align: center;
     font-size: 12px;
-    padding: 2px;
 }
 
 /* Properties Panel */
@@ -111,9 +147,40 @@ canvas {
     padding: 15px;
     overflow-y: auto;
 }
-.prop-row { margin-bottom: 10px; }
+
+.prop-row { margin-bottom: 12px; }
 .prop-row label { display: block; font-size: 12px; margin-bottom: 4px; color: #888; }
 .prop-row input, .prop-row select { width: 100%; background: #3c3c3c; border: 1px solid var(--border); color: white; padding: 5px; box-sizing: border-box; }
+
+/* Side-by-side inputs (New) */
+.prop-row-dual { display: flex; align-items: flex-end; gap: 5px; }
+.prop-row-dual > div { flex: 1; }
+
+/* Aspect Lock Button (New) */
+.btn-lock-aspect {
+    background: #3c3c3c;
+    border: 1px solid var(--border);
+    color: #888;
+    cursor: pointer;
+    padding: 4px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+}
+.btn-lock-aspect.active { color: var(--accent); border-color: var(--accent); }
+
+/* Opacity Control (New) */
+.opacity-ctrl { display: flex; align-items: center; gap: 10px; }
+.opacity-ctrl input[type="range"] { flex: 1; }
+.opacity-ctrl input[type="number"] { width: 50px; text-align: center; }
+
+/* Checkbox Row (New) */
+.prop-row-check { display: flex; gap: 15px; margin-top: 10px; }
+.prop-row-check label { display: flex; align-items: center; gap: 5px; cursor: pointer; color: #ccc; }
+.prop-row-check input { width: auto; }
+
 .prop-group h4 { margin: 10px 0 5px; border-bottom: 1px solid #444; padding-bottom: 2px; font-size: 13px; color: #fff; }
 
 /* Modals */
@@ -142,22 +209,8 @@ canvas {
     position: absolute; right: 15px; top: 10px;
     color: #aaa; font-size: 24px; font-weight: bold; cursor: pointer;
 }
-.close:hover { color: #fff; }
-
-/* Browser / File Lists */
-.browser-controls { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-.browser-list-area { flex: 1; overflow-y: auto; border: 1px solid var(--border); background: #1e1e1e; }
-
-.file-list { list-style: none; padding: 0; margin: 0; }
-.file-list li {
-    padding: 8px; border-bottom: 1px solid #333; cursor: pointer; display: flex; align-items: center;
-}
-.file-list li:hover { background-color: #333; }
-.file-list li.selected { background-color: var(--accent); color: white; }
-.file-list li .icon { margin-right: 10px; width: 20px; text-align: center; }
 
 /* Asset Grid */
-.asset-toolbar { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
 .asset-grid {
     flex: 1; overflow-y: auto;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -169,6 +222,10 @@ canvas {
 }
 .asset-item:hover { background-color: #333; }
 .asset-item img { width: 48px; height: 48px; object-fit: contain; margin-bottom: 5px; }
-.asset-item .icon { font-size: 40px; margin-bottom: 5px; }
 .asset-item span { font-size: 11px; text-align: center; word-break: break-all; }
 .hint-text { font-size: 12px; color: #888; margin-top: 5px; }
+
+/* File List */
+.file-list { list-style: none; padding: 0; margin: 0; }
+.file-list li { padding: 8px; border-bottom: 1px solid #333; cursor: pointer; display: flex; align-items: center; }
+.file-list li:hover { background-color: #333; }
