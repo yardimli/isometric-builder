@@ -48,9 +48,9 @@ body {
 /* Workspace Layout */
 .workspace { display: flex; flex: 1; overflow: hidden; position: relative; }
 
-/* Treeview Panel (New) */
+/* Treeview Panel Enhancements */
 .treeview-panel {
-    width: 220px;
+    width: 260px; /* Widened to accommodate nesting */
     background-color: var(--bg-panel);
     border-right: 1px solid var(--border);
     display: flex;
@@ -58,33 +58,85 @@ body {
     overflow: hidden;
 }
 
-.treeview-header {
-    padding: 10px;
-    font-size: 12px;
-    font-weight: bold;
-    text-transform: uppercase;
+.tree-btn-bar {
+    padding: 5px;
+    background: #2d2d2d;
     border-bottom: 1px solid var(--border);
-    color: #888;
+    display: flex;
+    gap: 5px;
 }
+
+.tree-btn-bar button {
+    flex: 1;
+    font-size: 11px;
+    padding: 4px;
+    background: #444;
+    border: 1px solid #555;
+    color: #ccc;
+    cursor: pointer;
+}
+
+.tree-btn-bar button:hover { background: #555; color: #fff; }
 
 .treeview-content {
     flex: 1;
     overflow-y: auto;
+    padding: 5px 0;
+}
+
+/* Hierarchical Nesting */
+.tree-children {
+    margin-left: 18px;
+    border-left: 1px solid #333;
 }
 
 .tree-item {
-    padding: 6px 12px;
+    padding: 4px 8px;
     cursor: pointer;
     font-size: 13px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid #2d2d2d;
+    gap: 5px;
+    user-select: none;
+    position: relative;
+    border: 1px solid transparent;
+}
+
+/* Drag and Drop Visuals */
+.tree-item.drag-over {
+    border-top: 2px solid var(--accent);
+    background: rgba(0, 122, 204, 0.1);
+}
+
+.tree-item.drag-over-child {
+    background: rgba(0, 122, 204, 0.2);
+    border: 1px dashed var(--accent);
 }
 
 .tree-item:hover { background: #2a2d2e; }
-.tree-item.selected { background: #37373d; color: #fff; box-shadow: inset 3px 0 0 var(--accent); }
-.tree-item.scene-root { font-weight: bold; color: var(--accent); }
+.tree-item.selected { background: #37373d; color: #fff; }
+
+/* Collapse Toggle */
+.collapse-toggle {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #888;
+    cursor: pointer;
+}
+.collapse-toggle:hover { color: #fff; }
+.collapsed .tree-children { display: none; }
+
+/* Properties Panel Additions */
+.btn-delete {
+    background: #a31515;
+    margin-top: 20px;
+}
+.btn-delete:hover { background: #c41a1a; }
+.btn-delete:disabled { background: #444; cursor: not-allowed; opacity: 0.5; }
 
 /* Canvas Area */
 .canvas-wrapper {
@@ -229,3 +281,54 @@ canvas {
 .file-list { list-style: none; padding: 0; margin: 0; }
 .file-list li { padding: 8px; border-bottom: 1px solid #333; cursor: pointer; display: flex; align-items: center; }
 .file-list li:hover { background-color: #333; }
+
+/* Custom Dialog Styling */
+.custom-dialog {
+    background: var(--bg-panel);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    min-width: 300px;
+}
+
+.custom-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.custom-dialog p {
+    margin-top: 0;
+    font-size: 14px;
+}
+
+.custom-dialog input {
+    width: 100%;
+    background: #3c3c3c;
+    border: 1px solid var(--border);
+    color: white;
+    padding: 8px;
+    margin: 10px 0;
+    box-sizing: border-box;
+}
+
+.dlg-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.custom-dialog button {
+    padding: 6px 15px;
+    cursor: pointer;
+    border-radius: 3px;
+    border: 1px solid #555;
+    background: #444;
+    color: white;
+}
+
+.custom-dialog button.primary-btn {
+    background: var(--accent);
+    border: none;
+}
