@@ -43,6 +43,22 @@ body {
 .toolbar button:hover, .primary-btn:hover { opacity: 0.9; }
 .toolbar button:disabled { background: #555; cursor: default; }
 
+.separator {
+    color: var(--border);
+    margin: 0 10px;
+    user-select: none;
+}
+
+#btn-undo, #btn-redo {
+    background: #3c3c3c;
+    font-size: 14px;
+}
+
+#btn-undo:disabled, #btn-redo:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
 .controls label { font-size: 12px; margin-left: 10px; cursor: pointer; user-select: none; }
 
 /* Workspace Layout */

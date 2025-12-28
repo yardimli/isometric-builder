@@ -1,11 +1,11 @@
 /**
  * js/editor.js
+ * Core editor logic for rendering and object manipulation.
  */
 
 window.Editor = {
 	canvas: null,
 	ctx: null,
-	propPanel: null,
 	wrapper: null,
 	data: null,
 	images: {},
@@ -34,12 +34,17 @@ window.Editor = {
 	init: function () {
 		this.canvas = document.getElementById('gameCanvas');
 		this.ctx = this.canvas.getContext('2d');
-		this.propPanel = document.getElementById('prop-content');
 		this.wrapper = document.getElementById('canvas-wrapper');
 
+		// Toolbar Actions
 		document.getElementById('btn-play').onclick = () => { this.isPlaying = true; };
 		document.getElementById('btn-pause').onclick = () => { this.isPlaying = false; };
 
+		// History Actions (New)
+		document.getElementById('btn-undo').onclick = () => window.History.undo();
+		document.getElementById('btn-redo').onclick = () => window.History.redo();
+
+		// Grid Controls
 		document.getElementById('chk-grid-visible').onchange = (e) => {
 			if (this.data) this.data.meta.grid.enabled = e.target.checked;
 		};
@@ -47,6 +52,7 @@ window.Editor = {
 			if (this.data) this.data.meta.grid.snap = e.target.checked;
 		};
 
+		// Zoom Controls
 		document.getElementById('btn-zoom-in').onclick = () => this.setZoom(this.zoom + 0.1);
 		document.getElementById('btn-zoom-out').onclick = () => this.setZoom(this.zoom - 0.1);
 		document.getElementById('inp-zoom-percent').onchange = (e) => {
@@ -58,10 +64,12 @@ window.Editor = {
 			document.getElementById('modal-assets').style.display = 'block';
 		};
 
+		// Mouse Events
 		this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
 		window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
 		window.addEventListener('mouseup', () => this.handleMouseUp());
 
+		// Modal Close Logic
 		document.querySelectorAll('.close').forEach(span => {
 			span.onclick = function () {
 				this.closest('.modal').style.display = 'none';
@@ -71,7 +79,7 @@ window.Editor = {
 		requestAnimationFrame((t) => this.gameLoop(t));
 	},
 
-	// --- Custom Dialog API (Replaces alert/confirm/prompt) ---
+	// --- Custom Dialog API ---
 
 	alert: function (msg) {
 		return new Promise((resolve) => {
@@ -138,7 +146,13 @@ window.Editor = {
 		this.animState = {};
 		this.selectedId = 'scene';
 
-		this.updatePropertiesPanel();
+		// Reset History on load (New)
+		window.History.undoStack = [];
+		window.History.redoStack = [];
+		window.History.updateButtons();
+
+		// Refresh UI (Modified to use PropertiesPanel)
+		window.PropertiesPanel.update();
 		window.Treeview.render();
 		this.fitZoomToScreen();
 		this.loadAssets();
@@ -188,6 +202,9 @@ window.Editor = {
 	addAssetToScene: function (assetPath) {
 		if (!this.data) return;
 
+		// Save state before mutation (New)
+		window.History.saveState();
+
 		let parentId = null;
 		const selected = this.data.objects.find(o => o.id === this.selectedId);
 		if (selected) {
@@ -218,12 +235,15 @@ window.Editor = {
 			}
 			this.data.objects.push(newObj);
 			this.selectedId = newObj.id;
-			this.updatePropertiesPanel();
+
+			// Refresh UI (Modified)
+			window.PropertiesPanel.update();
 			window.Treeview.render();
-			// Close modal after adding
 			document.getElementById('modal-assets').style.display = 'none';
 		});
 	},
+
+	// --- Rendering Loop ---
 
 	gameLoop: function (timestamp) {
 		if (!this.data) {
@@ -350,10 +370,13 @@ window.Editor = {
 		};
 	},
 
+	// --- Input Handling ---
+
 	handleMouseDown: function (e) {
 		if (!this.data) return;
 		const pos = this.getMousePos(e);
 
+		// Check Resize Handles
 		if (this.selectedId && this.selectedId !== 'scene') {
 			const obj = this.data.objects.find(o => o.id === this.selectedId);
 			if (obj && !obj.locked && obj.type !== 'folder') {
@@ -361,6 +384,7 @@ window.Editor = {
 				for (const key in handles) {
 					const h = handles[key];
 					if (pos.x >= h.x && pos.x <= h.x + h.w && pos.y >= h.y && pos.y <= h.y + h.h) {
+						window.History.saveState(); // Save state before resize (New)
 						this.resizingHandle = key;
 						this.resizeStart = { x: obj.x, y: obj.y, w: obj.width, h: obj.height, mx: pos.x, my: pos.y };
 						return;
@@ -369,19 +393,23 @@ window.Editor = {
 			}
 		}
 
+		// Check Object Selection
 		const sorted = [...this.data.objects].sort((a, b) => b.zIndex - a.zIndex);
 		const clicked = sorted.find(o => o.type !== 'folder' && pos.x >= o.x && pos.x <= o.x + o.width && pos.y >= o.y && pos.y <= o.y + o.height);
 
 		if (clicked) {
 			this.selectedId = clicked.id;
 			if (!clicked.locked) {
+				window.History.saveState(); // Save state before drag (New)
 				this.isDragging = true;
 				this.dragOffset = { x: pos.x - clicked.x, y: pos.y - clicked.y };
 			}
 		} else {
 			this.selectedId = 'scene';
 		}
-		this.updatePropertiesPanel();
+
+		// Refresh UI (Modified)
+		window.PropertiesPanel.update();
 		window.Treeview.render();
 	},
 
@@ -418,7 +446,7 @@ window.Editor = {
 
 			if (newW > 5 && newH > 5) {
 				obj.width = newW; obj.height = newH; obj.x = newX; obj.y = newY;
-				this.updatePropertiesPanel();
+				window.PropertiesPanel.update(); // Modified
 			}
 			return;
 		}
@@ -434,7 +462,7 @@ window.Editor = {
 			ny = Math.round(ny / sz) * sz;
 		}
 		obj.x = nx; obj.y = ny;
-		this.updatePropertiesPanel();
+		window.PropertiesPanel.update(); // Modified
 	},
 
 	handleMouseUp: function () {
@@ -442,117 +470,14 @@ window.Editor = {
 		this.resizingHandle = null;
 	},
 
-	updatePropertiesPanel: function () {
-		if (!this.data) return;
-
-		if (this.selectedId === 'scene') {
-			const meta = this.data.meta;
-			let presetOpts = '';
-			for (const name in this.resolutions) {
-				presetOpts += `<option value="${name}">${name}</option>`;
-			}
-			this.propPanel.innerHTML = `
-        <h4>Scene Properties</h4>
-        <div class="prop-row"><label>Name</label><input value="${meta.sceneName}" onchange="Editor.updateSceneProp('sceneName', this.value)"></div>
-        <div class="prop-row"><label>Preset Size</label><select onchange="Editor.applyResolutionPreset(this.value)">${presetOpts}</select></div>
-        <div class="prop-row-dual">
-            <div><label>Width</label><input type="number" value="${meta.width}" onchange="Editor.updateSceneProp('width', Number(this.value))"></div>
-            <div><label>Height</label><input type="number" value="${meta.height}" onchange="Editor.updateSceneProp('height', Number(this.value))"></div>
-        </div>
-        <div class="prop-row"><label>Bg Color</label><input type="color" value="${meta.backgroundColor}" onchange="Editor.updateSceneProp('backgroundColor', this.value)"></div>
-        <div class="prop-row"><label>Grid Size</label><input type="number" value="${meta.grid.size}" onchange="Editor.updateSceneProp('gridSize', Number(this.value))"></div>
-      `;
-			return;
-		}
-
-		const obj = this.data.objects.find(o => o.id === this.selectedId);
-		if (!obj) return;
-
-		const isFolder = obj.type === 'folder';
-		const hasChildren = this.data.objects.some(o => o.parentId === obj.id);
-		const canDelete = !isFolder || !hasChildren;
-
-		this.propPanel.innerHTML = `
-      <h4>${isFolder ? 'Folder' : 'Object'} Properties</h4>
-      <div class="prop-row"><label>Name</label><input value="${obj.name}" onchange="Editor.updateProp('${obj.id}', 'name', this.value)"></div>
-      
-      <div class="prop-row-check">
-        <label><input type="checkbox" ${obj.visible ? 'checked' : ''} onchange="Editor.updateProp('${obj.id}', 'visible', this.checked)"> Visible</label>
-        <label><input type="checkbox" ${obj.locked ? 'checked' : ''} onchange="Editor.updateProp('${obj.id}', 'locked', this.checked)"> Locked</label>
-      </div>
-
-      ${!isFolder ? `
-        <div class="prop-row-dual" style="margin-top:10px;">
-          <div><label>X</label><input type="number" value="${Math.round(obj.x)}" onchange="Editor.updateProp('${obj.id}', 'x', Number(this.value))"></div>
-          <div><label>Y</label><input type="number" value="${Math.round(obj.y)}" onchange="Editor.updateProp('${obj.id}', 'y', Number(this.value))"></div>
-        </div>
-        <div class="prop-row-dual">
-          <div><label>Width</label><input type="number" value="${Math.round(obj.width)}" onchange="Editor.updateProp('${obj.id}', 'width', Number(this.value))"></div>
-          <button class="btn-lock-aspect ${this.aspectLocked ? 'active' : ''}" onclick="Editor.toggleAspect()" title="Lock Aspect Ratio">🔗</button>
-          <div><label>Height</label><input type="number" value="${Math.round(obj.height)}" onchange="Editor.updateProp('${obj.id}', 'height', Number(this.value))"></div>
-        </div>
-        <div class="prop-row">
-          <label>Opacity</label>
-          <div class="opacity-ctrl">
-              <input type="range" min="0" max="1" step="0.01" value="${obj.opacity}" oninput="Editor.updateProp('${obj.id}', 'opacity', Number(this.value))">
-              <input type="number" min="0" max="1" step="0.1" value="${obj.opacity}" onchange="Editor.updateProp('${obj.id}', 'opacity', Number(this.value))">
-          </div>
-        </div>
-      ` : ''}
-
-      <div class="prop-row"><label>Z-Index</label><input type="number" value="${obj.zIndex}" onchange="Editor.updateProp('${obj.id}', 'zIndex', Number(this.value))"></div>
-      
-      <button class="primary-btn btn-delete" ${!canDelete ? 'disabled title="Only empty folders can be deleted"' : ''} onclick="Editor.deleteObject('${obj.id}')">
-        Delete ${isFolder ? 'Folder' : 'Asset'}
-      </button>
-      
-      ${!isFolder ? `<button class="primary-btn" style="width:100%; margin-top:10px;" onclick="Editor.fitObjectToScene('${obj.id}')">Fit to Scene</button>` : ''}
-    `;
-	},
-
-	toggleAspect: function () {
-		this.aspectLocked = !this.aspectLocked;
-		this.updatePropertiesPanel();
-	},
-
-	updateProp: function (id, key, val) {
-		const obj = this.data.objects.find(o => o.id === id);
-		if (!obj) return;
-		const oldW = obj.width;
-		const oldH = obj.height;
-		obj[key] = val;
-		if (this.aspectLocked && !obj.type === 'folder') {
-			const ratio = oldW / oldH;
-			if (key === 'width') obj.height = val / ratio;
-			if (key === 'height') obj.width = val * ratio;
-		}
-		if (key === 'name' || key === 'zIndex') window.Treeview.render();
-		if (key !== 'opacity') this.updatePropertiesPanel();
-	},
-
-	updateSceneProp: function (key, val) {
-		if (key === 'gridSize') this.data.meta.grid.size = val;
-		else this.data.meta[key] = val;
-		if (key === 'width' || key === 'height') {
-			this.canvas[key] = val;
-			this.setZoom(this.zoom);
-		}
-		if (key === 'sceneName') window.Treeview.render();
-	},
-
-	applyResolutionPreset: function (name) {
-		const res = this.resolutions[name];
-		if (res && res.w > 0) {
-			this.updateSceneProp('width', res.w);
-			this.updateSceneProp('height', res.h);
-			this.updatePropertiesPanel();
-			this.fitZoomToScreen();
-		}
-	},
+	// --- Object Actions ---
 
 	fitObjectToScene: function (id) {
 		const obj = this.data.objects.find(o => o.id === id);
 		if (!obj || obj.type === 'folder') return;
+
+		window.History.saveState(); // Save state (New)
+
 		const sceneW = this.data.meta.width;
 		const sceneH = this.data.meta.height;
 		const objRatio = obj.width / obj.height;
@@ -565,18 +490,18 @@ window.Editor = {
 			obj.height = sceneH; obj.width = sceneH * objRatio;
 			obj.y = 0; obj.x = (sceneW - obj.width) / 2;
 		}
-		this.updatePropertiesPanel();
+		window.PropertiesPanel.update(); // Modified
 	},
 
 	deleteObject: async function (id) {
 		const index = this.data.objects.findIndex(o => o.id === id);
 		if (index !== -1) {
-			// Use custom confirm
 			const confirmed = await this.confirm('Are you sure you want to delete this?');
 			if (confirmed) {
+				window.History.saveState(); // Save state (New)
 				this.data.objects.splice(index, 1);
 				this.selectedId = 'scene';
-				this.updatePropertiesPanel();
+				window.PropertiesPanel.update(); // Modified
 				window.Treeview.render();
 			}
 		}

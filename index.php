@@ -16,6 +16,9 @@
             <button id="btn-save" type="button">💾 Save</button>
             <button id="btn-save-as" type="button">💾 Save As...</button>
             <button id="btn-assets-modal" type="button">🖼️ Assets</button>
+            <span class="separator">|</span>
+            <button id="btn-undo" type="button" title="Undo (Ctrl+Z)" disabled>↩️</button>
+            <button id="btn-redo" type="button" title="Redo (Ctrl+Y)" disabled>↪️</button>
         </div>
         <span>Scene: <strong id="scene-name">Unsaved</strong></span>
         <div class="controls">
@@ -120,6 +123,8 @@
 </dialog>
 
 <script src="js/assets.js"></script>
+<script src="js/history.js"></script>
+<script src="js/properties.js"></script>
 <script src="js/treeview.js"></script>
 <script src="js/scene_manager.js"></script>
 <script src="js/editor.js"></script>
