@@ -1,218 +1,176 @@
-document.addEventListener('DOMContentLoaded', () => {
-	const canvas = document.getElementById('gameCanvas');
-	const ctx = canvas.getContext('2d');
-	const propPanel = document.getElementById('prop-content');
+/**
+ * editor.js
+ * Handles the Canvas, Game Loop, Object Interaction, and Properties Panel.
+ */
+
+window.Editor = {
+	canvas: null,
+	ctx: null,
+	propPanel: null,
 	
 	// State
-	let data = null; // Will be loaded via AJAX
-	let images = {};
-	let isPlaying = false;
-	let selectedId = null;
-	let isDragging = false;
-	let dragOffset = { x: 0, y: 0 };
-	let lastTime = 0;
-	let animState = {};
+	data: null,
+	images: {},
+	isPlaying: false,
+	selectedId: 'scene', // 'scene' or object ID
+	isDragging: false,
+	dragOffset: { x: 0, y: 0 },
+	lastTime: 0,
+	animState: {},
 	
-	// --- Initialization ---
-	
-	function init() {
-		// Setup UI Listeners
-		document.getElementById('btn-play').onclick = () => isPlaying = true;
-		document.getElementById('btn-pause').onclick = () => isPlaying = false;
-		document.getElementById('chk-grid').onchange = (e) => { if(data) data.meta.grid.enabled = e.target.checked; };
+	init: function () {
+		this.canvas = document.getElementById('gameCanvas');
+		this.ctx = this.canvas.getContext('2d');
+		this.propPanel = document.getElementById('prop-content');
+		
+		// UI Listeners
+		document.getElementById('btn-play').onclick = () => { this.isPlaying = true; };
+		document.getElementById('btn-pause').onclick = () => { this.isPlaying = false; };
+		
+		// Grid Controls
+		document.getElementById('chk-grid-visible').onchange = (e) => {
+			if (this.data) this.data.meta.grid.enabled = e.target.checked;
+		};
+		document.getElementById('chk-grid-snap').onchange = (e) => {
+			if (this.data) this.data.meta.grid.snap = e.target.checked;
+		};
+		
+		// Scene Properties Button
+		document.getElementById('btn-scene-props').onclick = () => {
+			this.selectedId = 'scene';
+			this.updatePropertiesPanel();
+		};
+		
+		// Asset Modal Trigger
+		document.getElementById('btn-assets-modal').onclick = () => {
+			document.getElementById('modal-assets').style.display = 'block';
+		};
 		
 		// Canvas Interaction
-		canvas.addEventListener('mousedown', handleMouseDown);
-		canvas.addEventListener('mousemove', handleMouseMove);
-		canvas.addEventListener('mouseup', handleMouseUp);
+		this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+		this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+		this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
 		
-		// Modal Logic
-		setupModals();
-		
-		// Load Default Scene
-		loadScene('forest_level_1.json');
-	}
-	
-	// --- AJAX Operations ---
-	
-	function loadScene(filename) {
-		const formData = new FormData();
-		formData.append('action', 'load_scene');
-		formData.append('filename', filename);
-		
-		fetch('php/file_manager.php', { method: 'POST', body: formData })
-			.then(r => r.json())
-			.then(res => {
-				if (res.success) {
-					data = res.data;
-					document.getElementById('scene-name').innerText = data.meta.sceneName;
-					canvas.width = data.meta.width;
-					canvas.height = data.meta.height;
-					
-					// Reset State
-					images = {};
-					animState = {};
-					selectedId = null;
-					propPanel.innerHTML = '<p class="hint">Select an object.</p>';
-					
-					loadAssets().then(() => {
-						requestAnimationFrame(gameLoop);
-					});
-				} else {
-					alert('Error loading scene: ' + res.message);
-					// Initialize empty if failed
-					if(!data) createEmptyScene();
-				}
-			});
-	}
-	
-	function saveScene(filename) {
-		if (!data) return;
-		data.meta.sceneName = filename.replace('.json', '');
-		
-		const formData = new FormData();
-		formData.append('action', 'save_scene');
-		formData.append('filename', filename);
-		formData.append('data', JSON.stringify(data, null, 2));
-		
-		fetch('php/file_manager.php', { method: 'POST', body: formData })
-			.then(r => r.json())
-			.then(res => {
-				alert(res.message);
-				if(res.success) document.getElementById('scene-name').innerText = data.meta.sceneName;
-			});
-	}
-	
-	function listScenes() {
-		const formData = new FormData();
-		formData.append('action', 'list_scenes');
-		
-		fetch('php/file_manager.php', { method: 'POST', body: formData })
-			.then(r => r.json())
-			.then(res => {
-				const list = document.getElementById('scene-list');
-				list.innerHTML = '';
-				if (res.success) {
-					res.data.forEach(file => {
-						const li = document.createElement('li');
-						li.innerText = file;
-						li.onclick = () => {
-							loadScene(file);
-							document.getElementById('modal-open').style.display = 'none';
-						};
-						list.appendChild(li);
-					});
-				}
-			});
-	}
-	
-	function createEmptyScene() {
-		data = {
-			meta: { version: "1.0", sceneName: "New Scene", width: 800, height: 600, backgroundColor: "#333", grid: { enabled: true, size: 32, snap: true } },
-			library: { sprites: {} },
-			objects: []
-		};
-		canvas.width = 800; canvas.height = 600;
-		requestAnimationFrame(gameLoop);
-	}
-	
-	// --- Modal Handling ---
-	
-	function setupModals() {
-		const openModal = document.getElementById('modal-open');
-		const saveModal = document.getElementById('modal-save');
-		const assetsModal = document.getElementById('modal-assets');
-		
-		// Open
-		document.getElementById('btn-open-modal').onclick = () => {
-			listScenes();
-			openModal.style.display = 'block';
-		};
-		
-		// Save
-		document.getElementById('btn-save-modal').onclick = () => {
-			document.getElementById('inp-save-name').value = data ? (data.meta.sceneName + '.json') : '';
-			saveModal.style.display = 'block';
-		};
-		document.getElementById('btn-confirm-save').onclick = () => {
-			const name = document.getElementById('inp-save-name').value;
-			if(name) {
-				saveScene(name);
-				saveModal.style.display = 'none';
-			}
-		};
-		
-		// Assets
-		document.getElementById('btn-assets-modal').onclick = () => {
-			assetsModal.style.display = 'block';
-			// Trigger scan in assets.js if needed, though it inits on load
-		};
-		
-		// Close Buttons
+		// Close Modals Logic (Generic)
 		document.querySelectorAll('.close').forEach(span => {
-			span.onclick = function() {
+			span.onclick = function () {
 				this.closest('.modal').style.display = 'none';
-			}
+			};
 		});
-		
-		// Click outside to close
 		window.onclick = (event) => {
 			if (event.target.classList.contains('modal')) {
 				event.target.style.display = 'none';
 			}
 		};
-	}
-	
-	// --- Asset Loading (Same logic, just updated references) ---
-	
-	function loadAssets() {
-		const promises = [];
-		if (data.meta.backgroundImage) promises.push(loadImage('bg', data.meta.backgroundImage));
 		
-		data.objects.forEach(obj => {
-			if (obj.type === 'static' && obj.asset) promises.push(loadImage(obj.asset, obj.asset));
+		// Start Loop
+		requestAnimationFrame((t) => this.gameLoop(t));
+	},
+	
+	// Called by SceneManager when JSON is fetched
+	loadSceneData: function (newData) {
+		this.data = newData;
+		
+		// Sync UI
+		document.getElementById('chk-grid-visible').checked = this.data.meta.grid.enabled;
+		document.getElementById('chk-grid-snap').checked = this.data.meta.grid.snap;
+		
+		this.canvas.width = this.data.meta.width;
+		this.canvas.height = this.data.meta.height;
+		
+		// Reset State
+		this.images = {};
+		this.animState = {};
+		this.selectedId = 'scene';
+		this.updatePropertiesPanel();
+		
+		this.loadAssets();
+	},
+	
+	// --- Asset Loading ---
+	
+	loadAssets: function () {
+		const promises = [];
+		if (this.data.meta.backgroundImage) promises.push(this.loadImage('bg', this.data.meta.backgroundImage));
+		
+		this.data.objects.forEach(obj => {
+			if (obj.type === 'static' && obj.asset) promises.push(this.loadImage(obj.asset, obj.asset));
 		});
 		
-		const library = data.library.sprites;
+		const library = this.data.library.sprites;
 		for (let key in library) {
-			if (library[key].sourceFile) promises.push(loadImage(library[key].sourceFile, library[key].sourceFile));
+			if (library[key].sourceFile) promises.push(this.loadImage(library[key].sourceFile, library[key].sourceFile));
 		}
 		return Promise.all(promises);
-	}
+	},
 	
-	function loadImage(key, src) {
+	loadImage: function (key, src) {
 		return new Promise((resolve) => {
-			if (images[key]) return resolve();
+			if (this.images[key]) return resolve();
 			const img = new Image();
-			img.src = src; // Relative path handled by browser
-			img.onload = () => { images[key] = img; resolve(); };
-			img.onerror = () => { console.warn(`Missing: ${src}`); images[key] = null; resolve(); };
+			img.src = src;
+			img.onload = () => { this.images[key] = img; resolve(); };
+			img.onerror = () => { console.warn(`Missing: ${src}`); this.images[key] = null; resolve(); };
 		});
-	}
+	},
 	
-	// --- Game Loop (Standard) ---
-	
-	function gameLoop(timestamp) {
-		if (!data) return;
-		const dt = (timestamp - lastTime) / 1000;
-		lastTime = timestamp;
+	addAssetToScene: function (assetPath) {
+		if (!this.data) return;
 		
-		if (isPlaying) updateAnimations(dt);
-		render();
-		requestAnimationFrame(gameLoop);
-	}
+		const newObj = {
+			id: 'obj_' + Date.now(),
+			name: 'New Object',
+			type: 'static',
+			asset: assetPath,
+			x: this.canvas.width / 2 - 32,
+			y: this.canvas.height / 2 - 32,
+			width: 64,
+			height: 64,
+			opacity: 1,
+			zIndex: 5,
+			visible: true,
+			locked: false
+		};
+		
+		this.loadImage(assetPath, assetPath).then(() => {
+			const img = this.images[assetPath];
+			if (img) {
+				newObj.width = img.width;
+				newObj.height = img.height;
+			}
+			this.data.objects.push(newObj);
+			this.selectedId = newObj.id;
+			this.updatePropertiesPanel();
+			document.getElementById('modal-assets').style.display = 'none';
+		});
+	},
 	
-	function updateAnimations(dt) {
-		data.objects.forEach(obj => {
+	// --- Game Loop ---
+	
+	gameLoop: function (timestamp) {
+		if (!this.data) {
+			requestAnimationFrame((t) => this.gameLoop(t));
+			return;
+		}
+		const dt = (timestamp - this.lastTime) / 1000;
+		this.lastTime = timestamp;
+		
+		if (this.isPlaying) this.updateAnimations(dt);
+		this.render();
+		requestAnimationFrame((t) => this.gameLoop(t));
+	},
+	
+	updateAnimations: function (dt) {
+		this.data.objects.forEach(obj => {
 			if (obj.type !== 'sprite') return;
-			if (!animState[obj.id]) animState[obj.id] = { frameIndex: 0, timer: 0 };
+			if (!this.animState[obj.id]) this.animState[obj.id] = { frameIndex: 0, timer: 0 };
 			
-			const config = data.library.sprites[obj.spriteConfigId];
+			const config = this.data.library.sprites[obj.spriteConfigId];
 			if (!config) return;
 			const anim = config.animations[obj.currentAnimation];
 			if (!anim) return;
 			
-			const state = animState[obj.id];
+			const state = this.animState[obj.id];
 			state.timer += dt;
 			if (state.timer >= (1 / anim.fps)) {
 				state.timer = 0;
@@ -222,140 +180,176 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 			}
 		});
-	}
+	},
 	
 	// --- Rendering ---
 	
-	function render() {
-		ctx.fillStyle = data.meta.backgroundColor;
-		ctx.fillRect(0, 0, canvas.width, canvas.height);
+	render: function () {
+		this.ctx.fillStyle = this.data.meta.backgroundColor;
+		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 		
-		if (data.meta.backgroundImage && images['bg']) {
-			if (data.meta.backgroundMode === 'tile') {
-				const p = ctx.createPattern(images['bg'], 'repeat');
-				ctx.fillStyle = p; ctx.fillRect(0, 0, canvas.width, canvas.height);
+		if (this.data.meta.backgroundImage && this.images['bg']) {
+			if (this.data.meta.backgroundMode === 'tile') {
+				const p = this.ctx.createPattern(this.images['bg'], 'repeat');
+				this.ctx.fillStyle = p;
+				this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 			} else {
-				ctx.drawImage(images['bg'], 0, 0, canvas.width, canvas.height);
+				this.ctx.drawImage(this.images['bg'], 0, 0, this.canvas.width, this.canvas.height);
 			}
 		}
 		
-		if (data.meta.grid.enabled) drawGrid();
+		if (this.data.meta.grid.enabled) this.drawGrid();
 		
-		const sorted = [...data.objects].sort((a, b) => a.zIndex - b.zIndex);
+		const sorted = [...this.data.objects].sort((a, b) => a.zIndex - b.zIndex);
 		sorted.forEach(obj => {
 			if (!obj.visible) return;
-			ctx.save();
-			ctx.globalAlpha = obj.opacity;
+			this.ctx.save();
+			this.ctx.globalAlpha = obj.opacity;
 			
 			if (obj.type === 'static') {
-				const img = images[obj.asset];
-				if (img) ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
-				else { ctx.fillStyle = '#666'; ctx.fillRect(obj.x, obj.y, obj.width, obj.height); }
+				const img = this.images[obj.asset];
+				if (img) this.ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
+				else { this.ctx.fillStyle = '#666'; this.ctx.fillRect(obj.x, obj.y, obj.width, obj.height); }
 			} else if (obj.type === 'sprite') {
-				drawSprite(obj);
+				this.drawSprite(obj);
 			}
 			
-			if (selectedId === obj.id) {
-				ctx.strokeStyle = '#00FF00'; ctx.lineWidth = 2;
-				ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
+			if (this.selectedId === obj.id) {
+				this.ctx.strokeStyle = '#00FF00'; this.ctx.lineWidth = 2;
+				this.ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
 			}
-			ctx.restore();
+			this.ctx.restore();
 		});
-	}
+	},
 	
-	function drawSprite(obj) {
-		const config = data.library.sprites[obj.spriteConfigId];
+	drawSprite: function (obj) {
+		const config = this.data.library.sprites[obj.spriteConfigId];
 		if (!config) return;
-		const img = images[config.sourceFile];
+		const img = this.images[config.sourceFile];
 		if (!img) return;
 		
 		const anim = config.animations[obj.currentAnimation];
-		const state = animState[obj.id] || { frameIndex: 0 };
+		const state = this.animState[obj.id] || { frameIndex: 0 };
 		const frameId = anim.frames[state.frameIndex];
 		
 		const cols = Math.floor(img.width / config.frameWidth);
 		const col = frameId % cols;
 		const row = Math.floor(frameId / cols);
 		
-		ctx.drawImage(img, col * config.frameWidth, row * config.frameHeight, config.frameWidth, config.frameHeight, obj.x, obj.y, obj.width, obj.height);
-	}
+		this.ctx.drawImage(img, col * config.frameWidth, row * config.frameHeight, config.frameWidth, config.frameHeight, obj.x, obj.y, obj.width, obj.height);
+	},
 	
-	function drawGrid() {
-		const sz = data.meta.grid.size;
-		ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-		for (let x = 0; x <= canvas.width; x += sz) { ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
-		for (let y = 0; y <= canvas.height; y += sz) { ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
-		ctx.stroke();
-	}
+	drawGrid: function () {
+		const sz = this.data.meta.grid.size;
+		this.ctx.beginPath(); this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+		for (let x = 0; x <= this.canvas.width; x += sz) { this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvas.height); }
+		for (let y = 0; y <= this.canvas.height; y += sz) { this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvas.width, y); }
+		this.ctx.stroke();
+	},
 	
 	// --- Interaction ---
 	
-	function getMousePos(e) {
-		const r = canvas.getBoundingClientRect();
-		return { x: (e.clientX - r.left) * (canvas.width / r.width), y: (e.clientY - r.top) * (canvas.height / r.height) };
-	}
+	getMousePos: function (e) {
+		const r = this.canvas.getBoundingClientRect();
+		return { x: (e.clientX - r.left) * (this.canvas.width / r.width), y: (e.clientY - r.top) * (this.canvas.height / r.height) };
+	},
 	
-	function handleMouseDown(e) {
-		if(!data) return;
-		const pos = getMousePos(e);
-		const sorted = [...data.objects].sort((a, b) => b.zIndex - a.zIndex);
+	handleMouseDown: function (e) {
+		if (!this.data) return;
+		const pos = this.getMousePos(e);
+		const sorted = [...this.data.objects].sort((a, b) => b.zIndex - a.zIndex);
 		const clicked = sorted.find(o => pos.x >= o.x && pos.x <= o.x + o.width && pos.y >= o.y && pos.y <= o.y + o.height);
 		
 		if (clicked) {
-			selectedId = clicked.id;
-			updatePropertiesPanel(clicked);
+			this.selectedId = clicked.id;
+			this.updatePropertiesPanel();
 			if (!clicked.locked) {
-				isDragging = true;
-				dragOffset = { x: pos.x - clicked.x, y: pos.y - clicked.y };
+				this.isDragging = true;
+				this.dragOffset = { x: pos.x - clicked.x, y: pos.y - clicked.y };
 			}
 		} else {
-			selectedId = null;
-			propPanel.innerHTML = '<p class="hint">Select an object.</p>';
+			this.selectedId = 'scene';
+			this.updatePropertiesPanel();
 		}
-	}
+	},
 	
-	function handleMouseMove(e) {
-		if (!isDragging || !selectedId) return;
-		const pos = getMousePos(e);
-		const obj = data.objects.find(o => o.id === selectedId);
+	handleMouseMove: function (e) {
+		if (!this.isDragging || !this.selectedId || this.selectedId === 'scene') return;
+		const pos = this.getMousePos(e);
+		const obj = this.data.objects.find(o => o.id === this.selectedId);
 		if (!obj) return;
 		
-		let nx = pos.x - dragOffset.x;
-		let ny = pos.y - dragOffset.y;
+		let nx = pos.x - this.dragOffset.x;
+		let ny = pos.y - this.dragOffset.y;
 		
-		if (data.meta.grid.snap) {
-			const sz = data.meta.grid.size;
+		if (this.data.meta.grid.snap) {
+			const sz = this.data.meta.grid.size;
 			nx = Math.round(nx / sz) * sz;
 			ny = Math.round(ny / sz) * sz;
 		}
+		
 		obj.x = nx; obj.y = ny;
-		updatePropertiesPanel(obj);
-	}
+		this.updatePropertiesPanel();
+	},
 	
-	function handleMouseUp() { isDragging = false; }
+	handleMouseUp: function () { this.isDragging = false; },
 	
-	function updatePropertiesPanel(obj) {
-		const existing = document.getElementById('inp-id');
-		if (existing && existing.value === obj.id) {
-			document.getElementById('inp-x').value = obj.x;
-			document.getElementById('inp-y').value = obj.y;
+	updatePropertiesPanel: function () {
+		if (!this.data) return;
+		
+		if (this.selectedId === 'scene') {
+			const meta = this.data.meta;
+			const html = `
+        <h4>Scene Properties</h4>
+        <div class="prop-row"><label>Name</label><input value="${meta.sceneName}" onchange="Editor.updateSceneProp('sceneName', this.value)"></div>
+        <div class="prop-row"><label>Width</label><input type="number" value="${meta.width}" onchange="Editor.updateSceneProp('width', Number(this.value))"></div>
+        <div class="prop-row"><label>Height</label><input type="number" value="${meta.height}" onchange="Editor.updateSceneProp('height', Number(this.value))"></div>
+        <div class="prop-row"><label>Bg Color</label><input type="color" value="${meta.backgroundColor}" onchange="Editor.updateSceneProp('backgroundColor', this.value)"></div>
+        <div class="prop-row"><label>Grid Size</label><input type="number" value="${meta.grid.size}" onchange="Editor.updateSceneProp('gridSize', Number(this.value))"></div>
+      `;
+			this.propPanel.innerHTML = html;
 			return;
 		}
+		
+		const obj = this.data.objects.find(o => o.id === this.selectedId);
+		if (!obj) return;
+		
 		let html = `
-            <div class="prop-row"><label>ID</label><input id="inp-id" value="${obj.id}" disabled></div>
-            <div class="prop-row"><label>Name</label><input value="${obj.name}" onchange="updateProp('${obj.id}', 'name', this.value)"></div>
-            <div class="prop-row"><label>X</label><input type="number" id="inp-x" value="${obj.x}" onchange="updateProp('${obj.id}', 'x', Number(this.value))"></div>
-            <div class="prop-row"><label>Y</label><input type="number" id="inp-y" value="${obj.y}" onchange="updateProp('${obj.id}', 'y', Number(this.value))"></div>
-            <div class="prop-row"><label>W</label><input type="number" value="${obj.width}" onchange="updateProp('${obj.id}', 'width', Number(this.value))"></div>
-            <div class="prop-row"><label>H</label><input type="number" value="${obj.height}" onchange="updateProp('${obj.id}', 'height', Number(this.value))"></div>
-        `;
-		propPanel.innerHTML = html;
-	}
+      <h4>Object Properties</h4>
+      <div class="prop-row"><label>ID</label><input id="inp-id" value="${obj.id}" disabled></div>
+      <div class="prop-row"><label>Name</label><input value="${obj.name}" onchange="Editor.updateProp('${obj.id}', 'name', this.value)"></div>
+      <div class="prop-row"><label>X</label><input type="number" id="inp-x" value="${obj.x}" onchange="Editor.updateProp('${obj.id}', 'x', Number(this.value))"></div>
+      <div class="prop-row"><label>Y</label><input type="number" id="inp-y" value="${obj.y}" onchange="Editor.updateProp('${obj.id}', 'y', Number(this.value))"></div>
+      <div class="prop-row"><label>W</label><input type="number" value="${obj.width}" onchange="Editor.updateProp('${obj.id}', 'width', Number(this.value))"></div>
+      <div class="prop-row"><label>H</label><input type="number" value="${obj.height}" onchange="Editor.updateProp('${obj.id}', 'height', Number(this.value))"></div>
+      <div class="prop-row"><label>Opacity</label><input type="number" step="0.1" min="0" max="1" value="${obj.opacity}" onchange="Editor.updateProp('${obj.id}', 'opacity', Number(this.value))"></div>
+      <div class="prop-row"><label>Z-Index</label><input type="number" value="${obj.zIndex}" onchange="Editor.updateProp('${obj.id}', 'zIndex', Number(this.value))"></div>
+    `;
+		this.propPanel.innerHTML = html;
+	},
 	
-	window.updateProp = function(id, key, val) {
-		const obj = data.objects.find(o => o.id === id);
+	// Helpers exposed for HTML onchange events
+	updateProp: function (id, key, val) {
+		const obj = this.data.objects.find(o => o.id === id);
 		if (obj) obj[key] = val;
-	};
+	},
 	
-	init();
+	updateSceneProp: function (key, val) {
+		if (key === 'gridSize') {
+			this.data.meta.grid.size = val;
+		} else {
+			this.data.meta[key] = val;
+		}
+		if (key === 'width') this.canvas.width = val;
+		if (key === 'height') this.canvas.height = val;
+	}
+};
+
+// Global Bridge for Asset Browser
+window.addAssetToScene = function (path) {
+	window.Editor.addAssetToScene(path);
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+	window.Editor.init();
 });

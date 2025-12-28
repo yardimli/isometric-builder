@@ -43,6 +43,8 @@ body {
 .toolbar button:hover, .primary-btn:hover { opacity: 0.9; }
 .toolbar button:disabled { background: #555; cursor: default; }
 
+.controls label { font-size: 12px; margin-left: 10px; cursor: pointer; user-select: none; }
+
 /* Workspace */
 .workspace { display: flex; flex: 1; overflow: hidden; }
 .canvas-wrapper {
@@ -66,7 +68,8 @@ canvas { box-shadow: 0 0 20px rgba(0,0,0,0.5); background: #fff; }
 }
 .prop-row { margin-bottom: 10px; }
 .prop-row label { display: block; font-size: 12px; margin-bottom: 4px; color: #888; }
-.prop-row input { width: 100%; background: #3c3c3c; border: 1px solid var(--border); color: white; padding: 5px; box-sizing: border-box; }
+.prop-row input, .prop-row select { width: 100%; background: #3c3c3c; border: 1px solid var(--border); color: white; padding: 5px; box-sizing: border-box; }
+.prop-group h4 { margin: 10px 0 5px; border-bottom: 1px solid #444; padding-bottom: 2px; font-size: 13px; color: #fff; }
 
 /* Modals */
 .modal {
@@ -96,12 +99,17 @@ canvas { box-shadow: 0 0 20px rgba(0,0,0,0.5); background: #fff; }
 }
 .close:hover { color: #fff; }
 
-/* File Lists */
-.file-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+/* Browser / File Lists */
+.browser-controls { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.browser-list-area { flex: 1; overflow-y: auto; border: 1px solid var(--border); background: #1e1e1e; }
+
+.file-list { list-style: none; padding: 0; margin: 0; }
 .file-list li {
-    padding: 8px; border-bottom: 1px solid var(--border); cursor: pointer;
+    padding: 8px; border-bottom: 1px solid #333; cursor: pointer; display: flex; align-items: center;
 }
-.file-list li:hover { background-color: var(--accent); color: white; }
+.file-list li:hover { background-color: #333; }
+.file-list li.selected { background-color: var(--accent); color: white; }
+.file-list li .icon { margin-right: 10px; width: 20px; text-align: center; }
 
 /* Asset Grid */
 .asset-toolbar { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
@@ -118,3 +126,4 @@ canvas { box-shadow: 0 0 20px rgba(0,0,0,0.5); background: #fff; }
 .asset-item img { width: 48px; height: 48px; object-fit: contain; margin-bottom: 5px; }
 .asset-item .icon { font-size: 40px; margin-bottom: 5px; }
 .asset-item span { font-size: 11px; text-align: center; word-break: break-all; }
+.hint-text { font-size: 12px; color: #888; margin-top: 5px; }

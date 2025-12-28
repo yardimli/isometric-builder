@@ -1,5 +1,5 @@
 class AssetBrowser {
-	constructor() {
+	constructor () {
 		this.currentPath = 'assets';
 		this.grid = document.getElementById('asset-grid');
 		this.pathLabel = document.getElementById('asset-current-path');
@@ -11,7 +11,7 @@ class AssetBrowser {
 		this.scan(this.currentPath);
 	}
 	
-	scan(path) {
+	scan (path) {
 		const formData = new FormData();
 		formData.append('action', 'scan_assets');
 		formData.append('path', path);
@@ -31,7 +31,7 @@ class AssetBrowser {
 			.catch(err => console.error(err));
 	}
 	
-	render(data) {
+	render (data) {
 		this.currentPath = data.currentPath;
 		this.pathLabel.innerText = this.currentPath + '/';
 		this.grid.innerHTML = '';
@@ -62,16 +62,18 @@ class AssetBrowser {
 			el.innerHTML = `<img src="${fullSrc}"><span>${file}</span>`;
 			
 			el.onclick = () => {
-				// Copy path to clipboard or just alert for now
-				// In a real app, this would return the value to the active input field
-				alert(`Selected: ${fullSrc}`);
-				console.log('Selected Asset:', fullSrc);
+				// Call Editor function to add asset
+				if (window.addAssetToScene) {
+					window.addAssetToScene(fullSrc);
+				} else {
+					console.log('Selected Asset:', fullSrc);
+				}
 			};
 			this.grid.appendChild(el);
 		});
 	}
 	
-	goUp() {
+	goUp () {
 		const parent = this.btnUp.dataset.parent;
 		if (parent) this.scan(parent);
 	}
