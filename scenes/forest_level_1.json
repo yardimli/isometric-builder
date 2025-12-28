@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "version": "1.2",
+    "sceneName": "Forest_Level_1",
+    "width": 1280,
+    "height": 720,
+    "backgroundColor": "#87CEEB",
+    "backgroundImage": "assets/environment/sky_tiled.png",
+    "backgroundMode": "tile",
+    "physics": {
+      "gravityX": 0,
+      "gravityY": 9.8
+    },
+    "grid": {
+      "enabled": true,
+      "size": 64,
+      "snap": true
+    }
+  },
+  "library": {
+    "sprites": {
+      "hero_config": {
+        "sourceFile": "assets/characters/hero_sheet.png",
+        "frameWidth": 32,
+        "frameHeight": 32,
+        "animations": {
+          "idle": {
+            "frames": [
+              0,
+              1
+            ],
+            "loop": true,
+            "fps": 4
+          },
+          "walk": {
+            "frames": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "loop": true,
+            "fps": 10
+          },
+          "jump": {
+            "frames": [
+              6
+            ],
+            "loop": false,
+            "fps": 1
+          }
+        }
+      },
+      "enemy_slime": {
+        "sourceFile": "assets/enemies/slime.png",
+        "frameWidth": 16,
+        "frameHeight": 16,
+        "animations": {
+          "bounce": {
+            "frames": [
+              0,
+              1,
+              2,
+              1
+            ],
+            "loop": true,
+            "fps": 6
+          }
+        }
+      }
+    }
+  },
+  "objects": [
+    {
+      "id": "obj_1001",
+      "name": "floor_block_1",
+      "type": "static",
+      "asset": "assets/tiles/grass.png",
+      "x": 0,
+      "y": 600,
+      "width": 1280,
+      "height": 120,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": true
+    },
+    {
+      "id": "obj_1002",
+      "name": "hero_player",
+      "type": "sprite",
+      "spriteConfigId": "hero_config",
+      "currentAnimation": "idle",
+      "x": 100,
+      "y": 500,
+      "width": 64,
+      "height": 64,
+      "opacity": 1,
+      "zIndex": 10,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1003",
+      "name": "slime_mob_1",
+      "type": "sprite",
+      "spriteConfigId": "enemy_slime",
+      "currentAnimation": "bounce",
+      "x": 400,
+      "y": 568,
+      "width": 32,
+      "height": 32,
+      "opacity": 0.9,
+      "zIndex": 5,
+      "visible": true,
+      "locked": false
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+:root {
+    --bg-dark: #1e1e1e;
+    --bg-panel: #252526;
+    --text-main: #cccccc;
+    --accent: #007acc;
+    --border: #3e3e42;
+    --modal-bg: rgba(0, 0, 0, 0.6);
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.editor-container { display: flex; flex-direction: column; height: 100%; }
+
+/* Toolbar */
+.toolbar {
+    height: 40px;
+    background-color: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    justify-content: space-between;
+}
+
+.toolbar button, .primary-btn {
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    margin-right: 5px;
+}
+
+.toolbar button:hover, .primary-btn:hover { opacity: 0.9; }
+.toolbar button:disabled { background: #555; cursor: default; }
+
+/* Workspace */
+.workspace { display: flex; flex: 1; overflow: hidden; }
+.canvas-wrapper {
+    flex: 1;
+    background-color: #333;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+canvas { box-shadow: 0 0 20px rgba(0,0,0,0.5); background: #fff; }
+
+/* Properties Panel */
+.properties-panel {
+    width: 300px;
+    background-color: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    padding: 15px;
+    overflow-y: auto;
+}
+.prop-row { margin-bottom: 10px; }
+.prop-row label { display: block; font-size: 12px; margin-bottom: 4px; color: #888; }
+.prop-row input { width: 100%; background: #3c3c3c; border: 1px solid var(--border); color: white; padding: 5px; box-sizing: border-box; }
+
+/* Modals */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background-color: var(--modal-bg);
+}
+
+.modal-content {
+    background-color: var(--bg-panel);
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid var(--border);
+    width: 400px;
+    border-radius: 5px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+.modal-content.large { width: 600px; height: 500px; display: flex; flex-direction: column; }
+
+.close {
+    position: absolute; right: 15px; top: 10px;
+    color: #aaa; font-size: 24px; font-weight: bold; cursor: pointer;
+}
+.close:hover { color: #fff; }
+
+/* File Lists */
+.file-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+.file-list li {
+    padding: 8px; border-bottom: 1px solid var(--border); cursor: pointer;
+}
+.file-list li:hover { background-color: var(--accent); color: white; }
+
+/* Asset Grid */
+.asset-toolbar { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.asset-grid {
+    flex: 1; overflow-y: auto;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px; padding: 5px; border: 1px solid var(--border); background: #1e1e1e;
+}
+.asset-item {
+    display: flex; flex-direction: column; align-items: center;
+    cursor: pointer; padding: 5px; border-radius: 3px;
+}
+.asset-item:hover { background-color: #333; }
+.asset-item img { width: 48px; height: 48px; object-fit: contain; margin-bottom: 5px; }
+.asset-item .icon { font-size: 40px; margin-bottom: 5px; }
+.asset-item span { font-size: 11px; text-align: center; word-break: break-all; }
