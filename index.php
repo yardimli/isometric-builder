@@ -130,5 +130,6 @@
 <script src="js/treeview.js"></script>
 <script src="js/scene_manager.js"></script>
 <script src="js/editor.js"></script>
+<script src="js/interaction.js"></script>
 </body>
 </html>

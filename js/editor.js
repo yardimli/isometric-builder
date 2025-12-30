@@ -10,15 +10,10 @@ window.Editor = {
 	data: null,
 	images: {},
 	isPlaying: false,
-	selectedIds: [], // Changed from selectedId string to array
-	isDragging: false,
-	dragOffset: { x: 0, y: 0 }, // Used for primary selection
-	dragOffsets: {}, // Used for multi-selection relative positions
+	selectedIds: [],
 	lastTime: 0,
 	animState: {},
 	zoom: 1.0,
-	resizingHandle: null,
-	resizeStart: { x: 0, y: 0, w: 0, h: 0, mx: 0, my: 0 },
 	aspectLocked: true,
 	HANDLE_SIZE: 10,
 	
@@ -33,11 +28,11 @@ window.Editor = {
 	},
 	
 	// Getter for backward compatibility and single-item logic
-	get selectedId() {
+	get selectedId () {
 		return this.selectedIds.length > 0 ? this.selectedIds[0] : 'scene';
 	},
 	
-	set selectedId(val) {
+	set selectedId (val) {
 		if (val === 'scene' || !val) this.selectedIds = [];
 		else this.selectedIds = [val];
 	},
@@ -50,7 +45,8 @@ window.Editor = {
 		// Toolbar Actions
 		document.getElementById('btn-play').onclick = () => { this.isPlaying = true; };
 		document.getElementById('btn-pause').onclick = () => { this.isPlaying = false; };
-		document.getElementById('btn-duplicate').onclick = () => this.duplicateSelected();
+		// Updated: Delegate to Interaction
+		document.getElementById('btn-duplicate').onclick = () => window.Interaction.duplicateSelected();
 		
 		// History Actions
 		document.getElementById('btn-undo').onclick = () => window.History.undo();
@@ -76,17 +72,12 @@ window.Editor = {
 			document.getElementById('modal-assets').style.display = 'block';
 		};
 		
-		// Mouse Events
-		this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-		window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-		window.addEventListener('mouseup', () => this.handleMouseUp());
-		
 		// Keyboard Shortcuts
 		window.addEventListener('keydown', (e) => {
 			// Duplicate: Ctrl + D
 			if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
 				e.preventDefault();
-				this.duplicateSelected();
+				window.Interaction.duplicateSelected();
 			}
 			// Delete: Delete key
 			if (e.key === 'Delete') {
@@ -238,7 +229,7 @@ window.Editor = {
 			}
 		}
 		
-		const fileName = assetPath.split('/').pop().replace(/\.[^/.]+$/, "");
+		const fileName = assetPath.split('/').pop().replace(/\.[^/.]+$/, '');
 		let uniqueName = fileName;
 		let suffix = 1;
 		
@@ -399,157 +390,6 @@ window.Editor = {
 		};
 	},
 	
-	getMousePos: function (e) {
-		const r = this.canvas.getBoundingClientRect();
-		const scaleX = this.canvas.width / r.width;
-		const scaleY = this.canvas.height / r.height;
-		return {
-			x: (e.clientX - r.left) * scaleX,
-			y: (e.clientY - r.top) * scaleY
-		};
-	},
-	
-	// --- Input Handling ---
-	
-	handleMouseDown: function (e) {
-		if (!this.data) return;
-		const pos = this.getMousePos(e);
-		
-		// Check Resize Handles (Only if 1 item selected)
-		if (this.selectedIds.length === 1) {
-			const obj = this.data.objects.find(o => o.id === this.selectedIds[0]);
-			if (obj && !obj.locked && obj.type !== 'folder') {
-				const handles = this.getHandleCoords(obj);
-				for (const key in handles) {
-					const h = handles[key];
-					if (pos.x >= h.x && pos.x <= h.x + h.w && pos.y >= h.y && pos.y <= h.y + h.h) {
-						window.History.saveState();
-						this.resizingHandle = key;
-						this.resizeStart = { x: obj.x, y: obj.y, w: obj.width, h: obj.height, mx: pos.x, my: pos.y };
-						return;
-					}
-				}
-			}
-		}
-		
-		// Object Selection Logic
-		const sorted = [...this.data.objects]
-			.filter(o => o.visible && !o.locked && o.type !== 'folder')
-			.sort((a, b) => b.zIndex - a.zIndex);
-		
-		const clicked = sorted.find(o => pos.x >= o.x && pos.x <= o.x + o.width && pos.y >= o.y && pos.y <= o.y + o.height);
-		
-		if (clicked) {
-			const isMultiSelect = e.ctrlKey || e.shiftKey || e.metaKey;
-			
-			if (isMultiSelect) {
-				// Toggle selection
-				if (this.selectedIds.includes(clicked.id)) {
-					this.selectedIds = this.selectedIds.filter(id => id !== clicked.id);
-				} else {
-					this.selectedIds.push(clicked.id);
-				}
-			} else {
-				// If clicked item is not in current selection, reset selection to just this item
-				// If it IS in current selection, keep selection (allows dragging group)
-				if (!this.selectedIds.includes(clicked.id)) {
-					this.selectedIds = [clicked.id];
-				}
-			}
-			
-			// Initiate Dragging
-			if (this.selectedIds.length > 0) {
-				window.History.saveState();
-				this.isDragging = true;
-				this.dragOffsets = {};
-				// Calculate offsets for all selected items relative to mouse
-				this.selectedIds.forEach(id => {
-					const o = this.data.objects.find(obj => obj.id === id);
-					if (o) {
-						this.dragOffsets[id] = { x: pos.x - o.x, y: pos.y - o.y };
-					}
-				});
-			}
-		} else {
-			// Clicked empty space
-			if (!e.ctrlKey && !e.shiftKey && !e.metaKey) {
-				this.selectedIds = [];
-			}
-		}
-		
-		window.PropertiesPanel.update();
-		window.Treeview.render();
-	},
-	
-	handleMouseMove: function (e) {
-		const pos = this.getMousePos(e);
-		
-		// Resizing (Single object only)
-		if (this.resizingHandle && this.selectedIds.length === 1) {
-			const obj = this.data.objects.find(o => o.id === this.selectedIds[0]);
-			if (!obj) return;
-			const dx = pos.x - this.resizeStart.mx;
-			const ratio = this.resizeStart.w / this.resizeStart.h;
-			let newW = this.resizeStart.w;
-			let newH = this.resizeStart.h;
-			let newX = this.resizeStart.x;
-			let newY = this.resizeStart.y;
-			
-			if (this.resizingHandle === 'br') {
-				newW = this.resizeStart.w + dx;
-				newH = this.aspectLocked ? newW / ratio : this.resizeStart.h + (pos.y - this.resizeStart.my);
-			} else if (this.resizingHandle === 'bl') {
-				newW = this.resizeStart.w - dx;
-				newX = this.resizeStart.x + dx;
-				newH = this.aspectLocked ? newW / ratio : this.resizeStart.h + (pos.y - this.resizeStart.my);
-			} else if (this.resizingHandle === 'tr') {
-				newW = this.resizeStart.w + dx;
-				newH = this.aspectLocked ? newW / ratio : this.resizeStart.h - (pos.y - this.resizeStart.my);
-				newY = this.aspectLocked ? this.resizeStart.y - (newH - this.resizeStart.h) : pos.y;
-			} else if (this.resizingHandle === 'tl') {
-				newW = this.resizeStart.w - dx;
-				newX = this.resizeStart.x + dx;
-				newH = this.aspectLocked ? newW / ratio : this.resizeStart.h - (pos.y - this.resizeStart.my);
-				newY = this.aspectLocked ? this.resizeStart.y - (newH - this.resizeStart.h) : pos.y;
-			}
-			
-			if (newW > 5 && newH > 5) {
-				obj.width = newW; obj.height = newH; obj.x = newX; obj.y = newY;
-				window.PropertiesPanel.update();
-			}
-			return;
-		}
-		
-		// Dragging (Multi-object support)
-		if (this.isDragging && this.selectedIds.length > 0) {
-			this.selectedIds.forEach(id => {
-				const obj = this.data.objects.find(o => o.id === id);
-				if (!obj || obj.locked) return;
-				
-				const offset = this.dragOffsets[id];
-				if (!offset) return;
-				
-				let nx = pos.x - offset.x;
-				let ny = pos.y - offset.y;
-				
-				if (this.data.meta.grid.snap) {
-					const sz = this.data.meta.grid.size;
-					nx = Math.round(nx / sz) * sz;
-					ny = Math.round(ny / sz) * sz;
-				}
-				
-				obj.x = nx;
-				obj.y = ny;
-			});
-			window.PropertiesPanel.update();
-		}
-	},
-	
-	handleMouseUp: function () {
-		this.isDragging = false;
-		this.resizingHandle = null;
-	},
-	
 	// --- Object Actions ---
 	
 	fitObjectToScene: function (id) {
@@ -592,29 +432,11 @@ window.Editor = {
 		}
 	},
 	
+	// Duplicate logic moved to Interaction.js
 	duplicateSelected: function () {
-		if (this.selectedIds.length === 0) return;
-		
-		window.History.saveState();
-		
-		const newIds = [];
-		const objectsToDuplicate = this.data.objects.filter(o => this.selectedIds.includes(o.id));
-		
-		objectsToDuplicate.forEach(obj => {
-			// Deep clone
-			const clone = JSON.parse(JSON.stringify(obj));
-			clone.id = 'obj_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-			clone.name += '_copy';
-			clone.x += 20; // Offset slightly
-			clone.y += 20;
-			this.data.objects.push(clone);
-			newIds.push(clone.id);
-		});
-		
-		// Select the new copies
-		this.selectedIds = newIds;
-		window.PropertiesPanel.update();
-		window.Treeview.render();
+		if (window.Interaction) {
+			window.Interaction.duplicateSelected();
+		}
 	}
 };
 
