@@ -42,8 +42,6 @@ window.Treeview = {
         
         // IMPORTANT: Do NOT sort by Z-Index here.
         // We want the Treeview to reflect the array order (drawing order).
-        // The user can reorder items in the tree to change drawing order.
-        
         objects.forEach(obj => {
             const wrapper = document.createElement('div');
             wrapper.className = 'tree-node-wrapper' + (this.collapsedNodes.has(obj.id) ? ' collapsed' : '');
@@ -69,10 +67,15 @@ window.Treeview = {
         el.draggable = obj.id !== 'scene';
         el.dataset.id = obj.id;
         
+        // Collapse Toggle
         const toggle = document.createElement('div');
         toggle.className = 'collapse-toggle';
         if (obj.type === 'folder' || obj.id === 'scene') {
             toggle.innerText = this.collapsedNodes.has(obj.id) ? '▶' : '▼';
+            // Use mousedown to prevent conflict with drag/click
+            toggle.onmousedown = (e) => {
+                e.stopPropagation();
+            };
             toggle.onclick = (e) => {
                 e.stopPropagation();
                 this.toggleCollapse(obj.id);
@@ -85,21 +88,29 @@ window.Treeview = {
         
         el.onclick = (e) => {
             if (obj.id === 'scene') {
-                // Explicitly select scene
                 window.Editor.selectedIds = ['scene'];
             } else {
                 const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
                 
-                // Special logic: If clicking a folder, select all assets within it
                 if (obj.type === 'folder' && !isMulti) {
-                    const childIds = this.getAllDescendants(obj.id);
-                    // If folder has no children, select the folder itself so it can be deleted/renamed
-                    if (childIds.length > 0) {
-                        window.Editor.selectedIds = childIds;
+                    // Logic: First click selects folder. Second click (if already selected) selects children.
+                    const isAlreadySelected = window.Editor.selectedIds.length === 1 && window.Editor.selectedIds[0] === obj.id;
+                    
+                    if (isAlreadySelected) {
+                        // Second click: Select all assets inside
+                        const childIds = this.getAllDescendants(obj.id);
+                        if (childIds.length > 0) {
+                            window.Editor.selectedIds = childIds;
+                        } else {
+                            // Empty folder, keep folder selected
+                            window.Editor.selectedIds = [obj.id];
+                        }
                     } else {
+                        // First click: Select the folder itself
                         window.Editor.selectedIds = [obj.id];
                     }
                 } else {
+                    // Standard selection for non-folders or multi-select modifier
                     if (isMulti) {
                         if (window.Editor.selectedIds.includes(obj.id)) {
                             window.Editor.selectedIds = window.Editor.selectedIds.filter(id => id !== obj.id);
@@ -113,7 +124,6 @@ window.Treeview = {
             }
             window.PropertiesPanel.update();
             this.render();
-            // Redraw canvas to show selection outlines
             window.Editor.render();
         };
         
@@ -139,13 +149,8 @@ window.Treeview = {
             const relY = e.clientY - rect.top;
             const height = rect.height;
             
-            // Reset classes
             el.classList.remove('drag-over', 'drag-top', 'drag-bottom', 'drag-over-child');
             
-            // Determine Drop Position
-            // Top 25%: Insert Before
-            // Bottom 25%: Insert After
-            // Middle 50%: Nest (if folder/scene)
             if (relY < height * 0.25) {
                 this.dropPosition = 'before';
                 el.classList.add('drag-top');
@@ -157,7 +162,6 @@ window.Treeview = {
                     this.dropPosition = 'inside';
                     el.classList.add('drag-over');
                 } else {
-                    // If hovering middle of non-folder, default to after
                     this.dropPosition = 'after';
                     el.classList.add('drag-bottom');
                 }
@@ -205,44 +209,32 @@ window.Treeview = {
         const targetObj = objects.find(o => o.id === targetId);
         
         if (!draggedObj) return;
-        
-        // Prevent dragging parent into child
         if (this.isDescendant(draggedId, targetId)) return;
         
         window.History.saveState();
         
-        // 1. Remove dragged object from current array position
         const oldIndex = objects.indexOf(draggedObj);
         if (oldIndex > -1) {
             objects.splice(oldIndex, 1);
         }
         
-        // 2. Determine new position and parent
         if (this.dropPosition === 'inside') {
-            // Nesting
             draggedObj.parentId = (targetId === 'scene') ? null : targetId;
-            // Add to end of list (top of stack visually)
             objects.push(draggedObj);
         } else {
-            // Reordering (Before or After)
-            // Target object determines the parent
             draggedObj.parentId = targetObj ? targetObj.parentId : null;
-            
-            // Find index of target object (it might have shifted if we removed draggedObj)
             const targetIndex = objects.indexOf(targetObj);
             let newIndex = targetIndex;
             
             if (this.dropPosition === 'after') {
                 newIndex = targetIndex + 1;
             }
-            
-            // Insert at new index
             objects.splice(newIndex, 0, draggedObj);
         }
         
         window.PropertiesPanel.update();
         this.render();
-        window.Editor.render(); // Update canvas to reflect new order
+        window.Editor.render();
     },
     
     isDescendant: function (parentCandidateId, childId) {
@@ -263,7 +255,6 @@ window.Treeview = {
         if (!name) return;
         
         let parentId = null;
-        // If single selection, try to nest
         if (window.Editor.selectedIds.length === 1 && window.Editor.selectedIds[0] !== 'scene') {
             const selected = window.Editor.data.objects.find(o => o.id === window.Editor.selectedIds[0]);
             if (selected) {

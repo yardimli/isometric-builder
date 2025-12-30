@@ -109,8 +109,6 @@ window.PropertiesPanel = {
         if (!obj) return;
         
         const isFolder = obj.type === 'folder';
-        const hasChildren = window.Editor.data.objects.some(o => o.parentId === obj.id);
-        const canDelete = !isFolder || !hasChildren;
         const sceneW = window.Editor.data.meta.width;
         const sceneH = window.Editor.data.meta.height;
         
@@ -159,9 +157,8 @@ window.PropertiesPanel = {
         // Delete Button Logic
         const delBtn = document.getElementById('btn-obj-delete');
         delBtn.innerText = `Delete ${isFolder ? 'Folder' : 'Asset'}`;
-        delBtn.disabled = !canDelete;
-        if (!canDelete) delBtn.title = 'Only empty folders can be deleted';
-        else delBtn.title = '';
+        delBtn.disabled = false;
+        delBtn.title = isFolder ? 'Deletes folder and moves contents to root' : 'Deletes selected object';
     },
     
     updateObjProp: function (key, val, isContinuous = false) {
@@ -200,7 +197,6 @@ window.PropertiesPanel = {
     
     updateObjPropPct: function (key, pctVal) {
         if (window.Editor.selectedIds.length !== 1) return;
-        const id = window.Editor.selectedIds[0];
         const sceneW = window.Editor.data.meta.width;
         const sceneH = window.Editor.data.meta.height;
         let pxVal = 0;
@@ -226,6 +222,50 @@ window.PropertiesPanel = {
     
     updateMultiView: function (ids) {
         document.getElementById('lbl-multi-count').innerText = ids.length;
+        
+        // Calculate Average Percentages
+        const sceneW = window.Editor.data.meta.width;
+        const sceneH = window.Editor.data.meta.height;
+        let totalPctW = 0;
+        let totalPctH = 0;
+        let count = 0;
+        
+        ids.forEach(id => {
+            const obj = window.Editor.data.objects.find(o => o.id === id);
+            if (obj && obj.type !== 'folder') {
+                totalPctW += (obj.width / sceneW) * 100;
+                totalPctH += (obj.height / sceneH) * 100;
+                count++;
+            }
+        });
+        
+        const avgW = count > 0 ? (totalPctW / count).toFixed(2) : 0;
+        const avgH = count > 0 ? (totalPctH / count).toFixed(2) : 0;
+        
+        document.getElementById('inp-multi-w-pct').value = avgW;
+        document.getElementById('inp-multi-h-pct').value = avgH;
+    },
+    
+    updateMultiPropPct: function (key, pctVal) {
+        if (window.Editor.selectedIds.length === 0) return;
+        window.History.saveState();
+        
+        const sceneW = window.Editor.data.meta.width;
+        const sceneH = window.Editor.data.meta.height;
+        
+        window.Editor.selectedIds.forEach(id => {
+            const obj = window.Editor.data.objects.find(o => o.id === id);
+            if (obj && obj.type !== 'folder') {
+                if (key === 'width') {
+                    obj.width = (pctVal / 100) * sceneW;
+                } else if (key === 'height') {
+                    obj.height = (pctVal / 100) * sceneH;
+                }
+            }
+        });
+        
+        window.Editor.render();
+        // No need to full update() as input focus would be lost
     }
 };
 

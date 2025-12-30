@@ -178,6 +178,24 @@
 					items selected
 				</div>
 				
+				<!-- New Percentage Inputs for Multi-Select -->
+				<div class="prop-row-dual" style="margin-bottom: 15px;">
+					<div>
+						<label>Avg Width %</label>
+						<div class="unit-group">
+							<input type="number" id="inp-multi-w-pct" onchange="PropertiesPanel.updateMultiPropPct('width', Number(this.value))" title="% of Scene Width">
+							<input type="text" value="%" disabled style="width: 20px; padding:0; border:none; background:transparent;">
+						</div>
+					</div>
+					<div>
+						<label>Avg Height %</label>
+						<div class="unit-group">
+							<input type="number" id="inp-multi-h-pct" onchange="PropertiesPanel.updateMultiPropPct('height', Number(this.value))" title="% of Scene Height">
+							<input type="text" value="%" disabled style="width: 20px; padding:0; border:none; background:transparent;">
+						</div>
+					</div>
+				</div>
+				
 				<div class="multi-actions">
 					<button onclick="Editor.toggleMultiProperty('visible', false)">Hide All</button>
 					<button onclick="Editor.toggleMultiProperty('visible', true)">Show All</button>

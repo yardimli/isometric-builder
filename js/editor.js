@@ -27,13 +27,11 @@ window.Editor = {
 		'4K Desktop': { w: 3840, h: 2160 }
 	},
 	
-	// Updated: Returns null if nothing selected, 'scene' if scene selected, or first ID
 	get selectedId () {
 		if (this.selectedIds.length === 0) return null;
 		return this.selectedIds[0];
 	},
 	
-	// Updated: Allows setting 'scene' explicitly, or [] for nothing
 	set selectedId (val) {
 		if (val === null || val === undefined) this.selectedIds = [];
 		else this.selectedIds = [val];
@@ -434,17 +432,40 @@ window.Editor = {
 	deleteSelected: async function () {
 		if (this.selectedIds.length === 0) return;
 		
-		const confirmed = await this.confirm(`Delete ${this.selectedIds.length} item(s)?`);
+		const confirmed = await this.confirm(`Delete ${this.selectedIds.length} item(s)?\n(Folders will be unwrapped, keeping contents)`);
 		if (confirmed) {
 			window.History.saveState();
+			
+			// Separate folders from regular objects
+			const foldersToDelete = [];
+			const objectsToDelete = [];
+			
+			this.selectedIds.forEach(id => {
+				const obj = this.data.objects.find(o => o.id === id);
+				if (obj) {
+					if (obj.type === 'folder') foldersToDelete.push(obj.id);
+					else objectsToDelete.push(obj.id);
+				}
+			});
+			
+			// 1. Handle Folders: Move children to root (null)
+			if (foldersToDelete.length > 0) {
+				this.data.objects.forEach(obj => {
+					if (foldersToDelete.includes(obj.parentId)) {
+						obj.parentId = null; // Unwrap to scene root
+					}
+				});
+			}
+			
+			// 2. Remove the selected objects (including the now-empty folders)
 			this.data.objects = this.data.objects.filter(o => !this.selectedIds.includes(o.id));
+			
 			this.selectedIds = [];
 			window.PropertiesPanel.update();
 			window.Treeview.render();
 		}
 	},
 	
-	// Duplicate logic moved to Interaction.js
 	duplicateSelected: function () {
 		if (window.Interaction) {
 			window.Interaction.duplicateSelected();

@@ -73,7 +73,7 @@
   "objects": [
     {
       "id": "obj_1766938175165",
-      "name": "office",
+      "name": "office background",
       "type": "static",
       "asset": "assets/background/empty.png",
       "parentId": null,
@@ -87,64 +87,13 @@
       "locked": true
     },
     {
-      "id": "obj_1766938203325",
-      "name": "drawers",
-      "type": "static",
-      "asset": "assets/furniture/drawers.png",
+      "id": "folder_1767091235934",
+      "name": "office furniture",
+      "type": "folder",
       "parentId": null,
-      "x": -81.18120805369126,
-      "y": 331.1677852348993,
-      "width": 174.05317501290656,
-      "height": 206.13123457159926,
-      "opacity": 1,
       "zIndex": 0,
       "visible": true,
       "locked": false
-    },
-    {
-      "id": "obj_1766938308975",
-      "name": "desk",
-      "type": "static",
-      "asset": "assets/furniture/desk.png",
-      "parentId": null,
-      "x": 92.91846694692325,
-      "y": 405.51472199686975,
-      "width": 221.71794871794873,
-      "height": 202.87506355778314,
-      "opacity": 1,
-      "zIndex": 1,
-      "visible": true,
-      "locked": false
-    },
-    {
-      "id": "obj_1766938314800",
-      "name": "picture",
-      "type": "static",
-      "asset": "assets/furniture/picture-frame.png",
-      "parentId": null,
-      "x": 224.068376068376,
-      "y": 170.3931623931624,
-      "width": 116.09401709401709,
-      "height": 145.92823377739577,
-      "opacity": 1,
-      "zIndex": 0,
-      "visible": true,
-      "locked": false
-    },
-    {
-      "id": "obj_1766938318527",
-      "name": "plant",
-      "type": "static",
-      "asset": "assets/furniture/potted-plant.png",
-      "parentId": null,
-      "x": 158.42735042735035,
-      "y": 304.4102564102564,
-      "width": 78.12,
-      "height": 111.11653429602887,
-      "opacity": 1,
-      "zIndex": 0,
-      "visible": true,
-      "locked": true
     },
     {
       "id": "obj_1766938961356",
@@ -202,7 +151,7 @@
     },
     {
       "id": "obj_1767076924822",
-      "name": "shelf-leg",
+      "name": "shelf-leg-left-bottom",
       "type": "static",
       "asset": "assets/furniture/shelf-leg.png",
       "parentId": "folder_1767079129879",
@@ -217,7 +166,7 @@
     },
     {
       "id": "obj_1767077203537_535",
-      "name": "shelf-leg_copy",
+      "name": "shelf-leg-left-top",
       "type": "static",
       "asset": "assets/furniture/shelf-leg.png",
       "parentId": "folder_1767079129879",
@@ -232,7 +181,7 @@
     },
     {
       "id": "obj_1767077219348_580",
-      "name": "shelf-leg_copy",
+      "name": "shelf-leg-right-bottom",
       "type": "static",
       "asset": "assets/furniture/shelf-leg.png",
       "parentId": "folder_1767079129879",
@@ -247,7 +196,7 @@
     },
     {
       "id": "obj_1767077219348_354",
-      "name": "shelf-leg_copy_copy",
+      "name": "shelf-leg-right-top",
       "type": "static",
       "asset": "assets/furniture/shelf-leg.png",
       "parentId": "folder_1767079129879",
@@ -262,7 +211,7 @@
     },
     {
       "id": "obj_1767077700658",
-      "name": "shelf_1",
+      "name": "shelf-bottom",
       "type": "static",
       "asset": "assets/furniture/shelf.png",
       "parentId": "folder_1767079129879",
@@ -277,7 +226,7 @@
     },
     {
       "id": "obj_1767077818188_726",
-      "name": "shelf_2",
+      "name": "shelf-middle",
       "type": "static",
       "asset": "assets/furniture/shelf.png",
       "parentId": "folder_1767079129879",
@@ -292,7 +241,7 @@
     },
     {
       "id": "obj_1767077843975_128",
-      "name": "shelf_3",
+      "name": "shelf-top",
       "type": "static",
       "asset": "assets/furniture/shelf.png",
       "parentId": "folder_1767079129879",
@@ -370,7 +319,7 @@
     },
     {
       "id": "obj_1767088717343",
-      "name": "boy-1-back-right-with-box",
+      "name": "boy-1-back-with-box",
       "type": "static",
       "asset": "assets/people/boy-1-back-right-with-box.png",
       "parentId": "folder_1767091011506",
@@ -400,7 +349,7 @@
     },
     {
       "id": "obj_1767088824383",
-      "name": "boy-2-back-right-with-box",
+      "name": "boy-2-back-with-box",
       "type": "static",
       "asset": "assets/people/boy-2-back-right-with-box.png",
       "parentId": "folder_1767091011506",
@@ -430,7 +379,7 @@
     },
     {
       "id": "obj_1767088858456",
-      "name": "woman-1-with-box",
+      "name": "woman-1-front-with-box",
       "type": "static",
       "asset": "assets/people/woman-1-with-box.png",
       "parentId": "folder_1767091011506",
@@ -454,7 +403,7 @@
     },
     {
       "id": "obj_1767090496428",
-      "name": "launch-pad",
+      "name": "launch-pad-1",
       "type": "static",
       "asset": "assets/drones/launch-pad.png",
       "parentId": "folder_1767090532605",
@@ -465,7 +414,7 @@
       "opacity": 1,
       "zIndex": 1,
       "visible": true,
-      "locked": false
+      "locked": true
     },
     {
       "id": "folder_1767090532605",
@@ -562,7 +511,7 @@
     },
     {
       "id": "obj_1767090585639",
-      "name": "battery-shelf-wall",
+      "name": "battery-shelf-wall-left",
       "type": "static",
       "asset": "assets/batteries/battery-shelf-wall.png",
       "parentId": "folder_1767090569154",
@@ -573,11 +522,11 @@
       "opacity": 1,
       "zIndex": 0,
       "visible": true,
-      "locked": false
+      "locked": true
     },
     {
       "id": "obj_1767090590988",
-      "name": "battery-shelf_1",
+      "name": "battery-shelf-top",
       "type": "static",
       "asset": "assets/batteries/battery-shelf.png",
       "parentId": "folder_1767090569154",
@@ -586,28 +535,43 @@
       "width": 216,
       "height": 133.67647058823528,
       "opacity": 1,
-      "zIndex": 0,
+      "zIndex": 1,
+      "visible": true,
+      "locked": true
+    },
+    {
+      "id": "obj_1767091667986_451",
+      "name": "battery-1",
+      "type": "static",
+      "asset": "assets/batteries/battery-1.png",
+      "parentId": "folder_1767090569154",
+      "x": 406.0342857142857,
+      "y": 738.8465988500662,
+      "width": 67,
+      "height": 97.28482972136223,
+      "opacity": 1,
+      "zIndex": 1,
       "visible": true,
       "locked": false
     },
     {
       "id": "obj_1767090863971_112",
-      "name": "battery-1_copy",
+      "name": "battery-2",
       "type": "static",
       "asset": "assets/batteries/battery-1.png",
       "parentId": "folder_1767090569154",
       "x": 448.9371428571428,
-      "y": 756.880884564352,
+      "y": 755.4180274214948,
       "width": 67,
       "height": 97.28482972136223,
       "opacity": 1,
-      "zIndex": 0,
+      "zIndex": 1,
       "visible": true,
       "locked": false
     },
     {
       "id": "obj_1767090582248",
-      "name": "battery-1",
+      "name": "battery-3",
       "type": "static",
       "asset": "assets/batteries/battery-1.png",
       "parentId": "folder_1767090569154",
@@ -616,13 +580,13 @@
       "width": 67,
       "height": 97.28482972136223,
       "opacity": 1,
-      "zIndex": 0,
+      "zIndex": 1,
       "visible": true,
       "locked": false
     },
     {
       "id": "obj_1767090589246",
-      "name": "battery-shelf",
+      "name": "battery-shelf-bottom",
       "type": "static",
       "asset": "assets/batteries/battery-shelf.png",
       "parentId": "folder_1767090569154",
@@ -633,11 +597,41 @@
       "opacity": 1,
       "zIndex": 0,
       "visible": true,
+      "locked": true
+    },
+    {
+      "id": "obj_1767091620854_640",
+      "name": "battery-4",
+      "type": "static",
+      "asset": "assets/batteries/battery-1.png",
+      "parentId": "folder_1767090569154",
+      "x": 433.3485714285714,
+      "y": 834.9151702786378,
+      "width": 67,
+      "height": 97.28482972136223,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1767091552000_787",
+      "name": "battery-5",
+      "type": "static",
+      "asset": "assets/batteries/battery-1.png",
+      "parentId": "folder_1767090569154",
+      "x": 473.32571428571424,
+      "y": 857.3380274214949,
+      "width": 67,
+      "height": 97.28482972136223,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
       "locked": false
     },
     {
       "id": "obj_1767090776547_270",
-      "name": "launch-pad_copy",
+      "name": "launch-pad-2",
       "type": "static",
       "asset": "assets/drones/launch-pad.png",
       "parentId": "folder_1767090532605",
@@ -648,26 +642,11 @@
       "opacity": 1,
       "zIndex": 0,
       "visible": true,
-      "locked": false
-    },
-    {
-      "id": "obj_1767090780439_937",
-      "name": "launch-pad_copy_copy",
-      "type": "static",
-      "asset": "assets/drones/launch-pad.png",
-      "parentId": "folder_1767090532605",
-      "x": 226.1028571428571,
-      "y": 1139.5200000000002,
-      "width": 190.37142857142868,
-      "height": 119.34347691354208,
-      "opacity": 1,
-      "zIndex": 0,
-      "visible": true,
-      "locked": false
+      "locked": true
     },
     {
       "id": "obj_1767090785531_593",
-      "name": "launch-pad_copy",
+      "name": "launch-pad-3",
       "type": "static",
       "asset": "assets/drones/launch-pad.png",
       "parentId": "folder_1767090532605",
@@ -678,11 +657,26 @@
       "opacity": 1,
       "zIndex": 0,
       "visible": true,
-      "locked": false
+      "locked": true
+    },
+    {
+      "id": "obj_1767090780439_937",
+      "name": "launch-pad-4",
+      "type": "static",
+      "asset": "assets/drones/launch-pad.png",
+      "parentId": "folder_1767090532605",
+      "x": 226.1028571428571,
+      "y": 1139.5200000000002,
+      "width": 190.37142857142868,
+      "height": 119.34347691354208,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": true
     },
     {
       "id": "obj_1767090587731",
-      "name": "battery-shelf-wall_1",
+      "name": "battery-shelf-wall-right",
       "type": "static",
       "asset": "assets/batteries/battery-shelf-wall.png",
       "parentId": "folder_1767090569154",
@@ -693,7 +687,7 @@
       "opacity": 1,
       "zIndex": 3,
       "visible": true,
-      "locked": false
+      "locked": true
     },
     {
       "id": "folder_1767091011506",
@@ -701,6 +695,66 @@
       "type": "folder",
       "parentId": null,
       "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1766938314800",
+      "name": "picture",
+      "type": "static",
+      "asset": "assets/furniture/picture-frame.png",
+      "parentId": "folder_1767091235934",
+      "x": 224.068376068376,
+      "y": 170.3931623931624,
+      "width": 116.09401709401709,
+      "height": 145.92823377739577,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1766938203325",
+      "name": "drawers",
+      "type": "static",
+      "asset": "assets/furniture/drawers.png",
+      "parentId": "folder_1767091235934",
+      "x": -81.18120805369126,
+      "y": 331.1677852348993,
+      "width": 174.05317501290656,
+      "height": 206.13123457159926,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1766938318527",
+      "name": "plant",
+      "type": "static",
+      "asset": "assets/furniture/potted-plant.png",
+      "parentId": "folder_1767091235934",
+      "x": 158.42735042735035,
+      "y": 304.4102564102564,
+      "width": 78.12,
+      "height": 111.11653429602887,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": true
+    },
+    {
+      "id": "obj_1766938308975",
+      "name": "desk",
+      "type": "static",
+      "asset": "assets/furniture/desk.png",
+      "parentId": "folder_1767091235934",
+      "x": 92.91846694692325,
+      "y": 405.51472199686975,
+      "width": 221.71794871794873,
+      "height": 202.87506355778314,
+      "opacity": 1,
+      "zIndex": 1,
       "visible": true,
       "locked": false
     }
