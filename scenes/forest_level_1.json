@@ -147,21 +147,6 @@
       "locked": false
     },
     {
-      "id": "obj_1766938321168",
-      "name": "shelf",
-      "type": "static",
-      "asset": "assets/furniture/shelf.png",
-      "parentId": "folder_1766939792322",
-      "x": 380.7551196007574,
-      "y": 72.0188744886729,
-      "width": 411.6794584982504,
-      "height": 572.0740527183481,
-      "opacity": 1,
-      "zIndex": 1,
-      "visible": true,
-      "locked": true
-    },
-    {
       "id": "obj_1766938961356",
       "name": "package1",
       "type": "static",
@@ -211,6 +196,21 @@
       "name": "packages",
       "type": "folder",
       "parentId": null,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1767076924822",
+      "name": "shelf-leg",
+      "type": "static",
+      "asset": "assets/furniture/shelf-leg.png",
+      "parentId": "folder_1766939792322",
+      "x": 346.63512283894454,
+      "y": 245.1841160249777,
+      "width": 184.5195632393084,
+      "height": 247.90414603143728,
+      "opacity": 1,
       "zIndex": 0,
       "visible": true,
       "locked": false

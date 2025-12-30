@@ -7,59 +7,62 @@ window.Treeview = {
     container: null,
     collapsedNodes: new Set(),
     draggedId: null,
-
+    
     init: function () {
         this.container = document.getElementById('treeview-content');
         document.getElementById('btn-tree-new-node').onclick = () => this.createNewFolder();
     },
-
+    
     render: function () {
         if (!window.Editor || !window.Editor.data) return;
         this.container.innerHTML = '';
-
+        
         const rootWrapper = document.createElement('div');
         rootWrapper.className = 'tree-node-wrapper' + (this.collapsedNodes.has('scene') ? ' collapsed' : '');
-
-        const rootItem = this.createItemElement({ id: 'scene', name: window.Editor.data.meta.sceneName, type: 'scene' });
+        
+        // Scene is a special case, usually single select only
+        const isSceneSelected = window.Editor.selectedIds.length === 0; // Or specific scene ID if implemented
+        const rootItem = this.createItemElement({ id: 'scene', name: window.Editor.data.meta.sceneName, type: 'scene' }, isSceneSelected);
         rootWrapper.appendChild(rootItem);
-
+        
         const childrenContainer = document.createElement('div');
         childrenContainer.className = 'tree-children';
-
+        
         this.renderChildren(null, childrenContainer);
-
+        
         rootWrapper.appendChild(childrenContainer);
         this.container.appendChild(rootWrapper);
     },
-
+    
     renderChildren: function (parentId, container) {
         const objects = window.Editor.data.objects.filter(obj => obj.parentId === parentId);
         objects.sort((a, b) => b.zIndex - a.zIndex);
-
+        
         objects.forEach(obj => {
             const wrapper = document.createElement('div');
             wrapper.className = 'tree-node-wrapper' + (this.collapsedNodes.has(obj.id) ? ' collapsed' : '');
-
-            const item = this.createItemElement(obj);
+            
+            const isSelected = window.Editor.selectedIds.includes(obj.id);
+            const item = this.createItemElement(obj, isSelected);
             wrapper.appendChild(item);
-
+            
             if (obj.type === 'folder') {
                 const childGroup = document.createElement('div');
                 childGroup.className = 'tree-children';
                 this.renderChildren(obj.id, childGroup);
                 wrapper.appendChild(childGroup);
             }
-
+            
             container.appendChild(wrapper);
         });
     },
-
-    createItemElement: function (obj) {
+    
+    createItemElement: function (obj, isSelected) {
         const el = document.createElement('div');
-        el.className = `tree-item ${window.Editor.selectedId === obj.id ? 'selected' : ''}`;
+        el.className = `tree-item ${isSelected ? 'selected' : ''}`;
         el.draggable = obj.id !== 'scene';
         el.dataset.id = obj.id;
-
+        
         const toggle = document.createElement('div');
         toggle.className = 'collapse-toggle';
         if (obj.type === 'folder' || obj.id === 'scene') {
@@ -70,17 +73,31 @@ window.Treeview = {
             };
         }
         el.appendChild(toggle);
-
+        
         const icon = obj.type === 'folder' ? '📁' : (obj.type === 'sprite' ? '👾' : (obj.type === 'scene' ? '🎬' : '🖼️'));
         el.innerHTML += `<span>${icon}</span> <span class="name">${obj.name}</span>`;
-
-        el.onclick = () => {
-            window.Editor.selectedId = obj.id;
-            // MODIFIED: Correctly call the PropertiesPanel update method
+        
+        el.onclick = (e) => {
+            if (obj.id === 'scene') {
+                window.Editor.selectedIds = [];
+            } else {
+                const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
+                if (isMulti) {
+                    if (window.Editor.selectedIds.includes(obj.id)) {
+                        window.Editor.selectedIds = window.Editor.selectedIds.filter(id => id !== obj.id);
+                    } else {
+                        window.Editor.selectedIds.push(obj.id);
+                    }
+                } else {
+                    window.Editor.selectedIds = [obj.id];
+                }
+            }
             window.PropertiesPanel.update();
             this.render();
+            // Redraw canvas to show selection outlines
+            window.Editor.render();
         };
-
+        
         if (obj.id !== 'scene') {
             el.ondragstart = (e) => {
                 this.draggedId = obj.id;
@@ -92,7 +109,7 @@ window.Treeview = {
                 this.render();
             };
         }
-
+        
         el.ondragover = (e) => {
             e.preventDefault();
             if (this.draggedId === obj.id) return;
@@ -102,45 +119,44 @@ window.Treeview = {
                 el.classList.add('drag-over');
             }
         };
-
+        
         el.ondragleave = () => {
             el.classList.remove('drag-over', 'drag-over-child');
         };
-
+        
         el.ondrop = (e) => {
             e.preventDefault();
             const droppedId = e.dataTransfer.getData('text/plain');
             this.handleDrop(droppedId, obj.id);
         };
-
+        
         return el;
     },
-
+    
     toggleCollapse: function (id) {
         if (this.collapsedNodes.has(id)) this.collapsedNodes.delete(id);
         else this.collapsedNodes.add(id);
         this.render();
     },
-
+    
     handleDrop: function (draggedId, targetId) {
         const objects = window.Editor.data.objects;
         const draggedObj = objects.find(o => o.id === draggedId);
         const targetObj = objects.find(o => o.id === targetId);
-
+        
         if (!draggedObj) return;
-
+        
         if (targetId === 'scene' || (targetObj && targetObj.type === 'folder')) {
             if (this.isDescendant(draggedId, targetId)) return;
             draggedObj.parentId = (targetId === 'scene') ? null : targetId;
         } else if (targetObj) {
             draggedObj.parentId = targetObj.parentId;
         }
-
-        // MODIFIED: Update properties panel after moving items
+        
         window.PropertiesPanel.update();
         this.render();
     },
-
+    
     isDescendant: function (parentCandidateId, childId) {
         const objects = window.Editor.data.objects;
         let current = objects.find(o => o.id === childId);
@@ -150,20 +166,22 @@ window.Treeview = {
         }
         return false;
     },
-
+    
     createNewFolder: async function () {
         if (!window.Editor.data) return;
-
+        
         const name = await window.Editor.prompt('Enter folder name:', 'New Folder');
         if (!name) return;
-
+        
         let parentId = null;
-        const selected = window.Editor.data.objects.find(o => o.id === window.Editor.selectedId);
-
-        if (selected) {
-            parentId = (selected.type === 'folder') ? selected.id : selected.parentId;
+        // If single selection, try to nest
+        if (window.Editor.selectedIds.length === 1) {
+            const selected = window.Editor.data.objects.find(o => o.id === window.Editor.selectedIds[0]);
+            if (selected) {
+                parentId = (selected.type === 'folder') ? selected.id : selected.parentId;
+            }
         }
-
+        
         const newFolder = {
             id: 'folder_' + Date.now(),
             name: name,
@@ -173,11 +191,10 @@ window.Treeview = {
             visible: true,
             locked: false
         };
-
+        
         window.Editor.data.objects.push(newFolder);
-        window.Editor.selectedId = newFolder.id;
+        window.Editor.selectedIds = [newFolder.id];
         this.render();
-        // MODIFIED: Update properties panel when a new folder is selected
         window.PropertiesPanel.update();
     }
 };

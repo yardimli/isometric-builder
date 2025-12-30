@@ -5,33 +5,35 @@
 
 window.PropertiesPanel = {
     container: null,
-
+    
     init: function () {
         this.container = document.getElementById('prop-content');
     },
-
+    
     /**
      * Main render function for the panel.
      */
     update: function () {
         if (!window.Editor || !window.Editor.data) return;
-
-        const selectedId = window.Editor.selectedId;
-
-        if (selectedId === 'scene') {
+        
+        const selectedIds = window.Editor.selectedIds;
+        
+        if (selectedIds.length === 0) {
             this.renderSceneProperties();
+        } else if (selectedIds.length === 1) {
+            this.renderObjectProperties(selectedIds[0]);
         } else {
-            this.renderObjectProperties(selectedId);
+            this.renderMultiSelection(selectedIds);
         }
     },
-
+    
     renderSceneProperties: function () {
         const meta = window.Editor.data.meta;
         let presetOpts = '';
         for (const name in window.Editor.resolutions) {
             presetOpts += `<option value="${name}">${name}</option>`;
         }
-
+        
         this.container.innerHTML = `
       <h4>Scene Properties</h4>
       <div class="prop-row">
@@ -50,15 +52,15 @@ window.PropertiesPanel = {
       <div class="prop-row"><label>Grid Size</label><input type="number" value="${meta.grid.size}" onchange="PropertiesPanel.updateSceneProp('gridSize', Number(this.value))"></div>
     `;
     },
-
+    
     renderObjectProperties: function (id) {
         const obj = window.Editor.data.objects.find(o => o.id === id);
         if (!obj) return;
-
+        
         const isFolder = obj.type === 'folder';
         const hasChildren = window.Editor.data.objects.some(o => o.parentId === obj.id);
         const canDelete = !isFolder || !hasChildren;
-
+        
         this.container.innerHTML = `
       <h4>${isFolder ? 'Folder' : 'Object'} Properties</h4>
       <div class="prop-row">
@@ -92,35 +94,49 @@ window.PropertiesPanel = {
 
       <div class="prop-row"><label>Z-Index</label><input type="number" value="${obj.zIndex}" onchange="PropertiesPanel.updateProp('${obj.id}', 'zIndex', Number(this.value))"></div>
       
-      <button class="primary-btn btn-delete" ${!canDelete ? 'disabled title="Only empty folders can be deleted"' : ''} onclick="Editor.deleteObject('${obj.id}')">
+      <button class="primary-btn" style="width:100%; margin-top:20px;" onclick="Editor.duplicateSelected()">Duplicate</button>
+      <button class="primary-btn btn-delete" style="width:100%; margin-top:10px;" ${!canDelete ? 'disabled title="Only empty folders can be deleted"' : ''} onclick="Editor.deleteObject('${obj.id}')">
         Delete ${isFolder ? 'Folder' : 'Asset'}
       </button>
       
       ${!isFolder ? `<button class="primary-btn" style="width:100%; margin-top:10px;" onclick="Editor.fitObjectToScene('${obj.id}')">Fit to Scene</button>` : ''}
     `;
     },
-
+    
+    renderMultiSelection: function (ids) {
+        this.container.innerHTML = `
+            <h4>Multi-Selection</h4>
+            <div class="multi-select-info">
+                <span class="multi-select-count">${ids.length}</span>
+                items selected
+            </div>
+            
+            <button class="primary-btn" style="width:100%; margin-top:10px;" onclick="Editor.duplicateSelected()">Duplicate All</button>
+            <button class="primary-btn btn-delete" style="width:100%; margin-top:10px;" onclick="Editor.deleteSelected()">Delete All</button>
+        `;
+    },
+    
     updateProp: function (id, key, val, isContinuous = false) {
         const obj = window.Editor.data.objects.find(o => o.id === id);
         if (!obj) return;
-
+        
         // Save state for history before modification (if not continuous like a slider)
         if (!isContinuous) window.History.saveState();
-
+        
         const oldW = obj.width;
         const oldH = obj.height;
         obj[key] = val;
-
-        if (window.Editor.aspectLocked && !isFolder) {
+        
+        if (window.Editor.aspectLocked && obj.type !== 'folder') {
             const ratio = oldW / oldH;
             if (key === 'width') obj.height = val / ratio;
             if (key === 'height') obj.width = val * ratio;
         }
-
+        
         if (key === 'name' || key === 'zIndex') window.Treeview.render();
         if (key !== 'opacity') this.update();
     },
-
+    
     updateSceneProp: function (key, val) {
         window.History.saveState();
         if (key === 'gridSize') {
@@ -128,14 +144,14 @@ window.PropertiesPanel = {
         } else {
             window.Editor.data.meta[key] = val;
         }
-
+        
         if (key === 'width' || key === 'height') {
             window.Editor.canvas[key] = val;
             window.Editor.setZoom(window.Editor.zoom);
         }
         if (key === 'sceneName') window.Treeview.render();
     },
-
+    
     applyResolutionPreset: function (name) {
         const res = window.Editor.resolutions[name];
         if (res && res.w > 0) {
@@ -145,7 +161,7 @@ window.PropertiesPanel = {
             window.Editor.fitZoomToScreen();
         }
     },
-
+    
     toggleAspect: function () {
         window.Editor.aspectLocked = !window.Editor.aspectLocked;
         this.update();

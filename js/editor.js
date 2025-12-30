@@ -10,9 +10,10 @@ window.Editor = {
 	data: null,
 	images: {},
 	isPlaying: false,
-	selectedId: 'scene',
+	selectedIds: [], // Changed from selectedId string to array
 	isDragging: false,
-	dragOffset: { x: 0, y: 0 },
+	dragOffset: { x: 0, y: 0 }, // Used for primary selection
+	dragOffsets: {}, // Used for multi-selection relative positions
 	lastTime: 0,
 	animState: {},
 	zoom: 1.0,
@@ -20,7 +21,7 @@ window.Editor = {
 	resizeStart: { x: 0, y: 0, w: 0, h: 0, mx: 0, my: 0 },
 	aspectLocked: true,
 	HANDLE_SIZE: 10,
-
+	
 	resolutions: {
 		'Custom': { w: 0, h: 0 },
 		'iPhone 14 Pro': { w: 1179, h: 2556 },
@@ -30,20 +31,31 @@ window.Editor = {
 		'FHD Portrait': { w: 1080, h: 1920 },
 		'4K Desktop': { w: 3840, h: 2160 }
 	},
-
+	
+	// Getter for backward compatibility and single-item logic
+	get selectedId() {
+		return this.selectedIds.length > 0 ? this.selectedIds[0] : 'scene';
+	},
+	
+	set selectedId(val) {
+		if (val === 'scene' || !val) this.selectedIds = [];
+		else this.selectedIds = [val];
+	},
+	
 	init: function () {
 		this.canvas = document.getElementById('gameCanvas');
 		this.ctx = this.canvas.getContext('2d');
 		this.wrapper = document.getElementById('canvas-wrapper');
-
+		
 		// Toolbar Actions
 		document.getElementById('btn-play').onclick = () => { this.isPlaying = true; };
 		document.getElementById('btn-pause').onclick = () => { this.isPlaying = false; };
-
+		document.getElementById('btn-duplicate').onclick = () => this.duplicateSelected();
+		
 		// History Actions
 		document.getElementById('btn-undo').onclick = () => window.History.undo();
 		document.getElementById('btn-redo').onclick = () => window.History.redo();
-
+		
 		// Grid Controls
 		document.getElementById('chk-grid-visible').onchange = (e) => {
 			if (this.data) this.data.meta.grid.enabled = e.target.checked;
@@ -51,7 +63,7 @@ window.Editor = {
 		document.getElementById('chk-grid-snap').onchange = (e) => {
 			if (this.data) this.data.meta.grid.snap = e.target.checked;
 		};
-
+		
 		// Zoom Controls
 		document.getElementById('btn-zoom-in').onclick = () => this.setZoom(this.zoom + 0.1);
 		document.getElementById('btn-zoom-out').onclick = () => this.setZoom(this.zoom - 0.1);
@@ -59,28 +71,43 @@ window.Editor = {
 			const val = parseFloat(e.target.value);
 			if (!isNaN(val)) this.setZoom(val / 100);
 		};
-
+		
 		document.getElementById('btn-assets-modal').onclick = () => {
 			document.getElementById('modal-assets').style.display = 'block';
 		};
-
+		
 		// Mouse Events
 		this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
 		window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
 		window.addEventListener('mouseup', () => this.handleMouseUp());
-
+		
+		// Keyboard Shortcuts
+		window.addEventListener('keydown', (e) => {
+			// Duplicate: Ctrl + D
+			if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+				e.preventDefault();
+				this.duplicateSelected();
+			}
+			// Delete: Delete key
+			if (e.key === 'Delete') {
+				if (this.selectedIds.length > 0) {
+					this.deleteSelected();
+				}
+			}
+		});
+		
 		// Modal Close Logic
 		document.querySelectorAll('.close').forEach(span => {
 			span.onclick = function () {
 				this.closest('.modal').style.display = 'none';
 			};
 		});
-
+		
 		requestAnimationFrame((t) => this.gameLoop(t));
 	},
-
+	
 	// --- Custom Dialog API ---
-
+	
 	alert: function (msg) {
 		return new Promise((resolve) => {
 			const dlg = document.getElementById('dlg-alert');
@@ -92,7 +119,7 @@ window.Editor = {
 			dlg.showModal();
 		});
 	},
-
+	
 	confirm: function (msg) {
 		return new Promise((resolve) => {
 			const dlg = document.getElementById('dlg-confirm');
@@ -108,7 +135,7 @@ window.Editor = {
 			dlg.showModal();
 		});
 	},
-
+	
 	prompt: function (msg, defaultVal = '') {
 		return new Promise((resolve) => {
 			const dlg = document.getElementById('dlg-prompt');
@@ -127,42 +154,42 @@ window.Editor = {
 			dlg.showModal();
 		});
 	},
-
+	
 	// --- Scene Logic ---
-
+	
 	loadSceneData: function (newData) {
 		this.data = newData;
 		this.data.objects.forEach(obj => {
 			if (obj.parentId === undefined) obj.parentId = null;
 		});
-
+		
 		document.getElementById('chk-grid-visible').checked = this.data.meta.grid.enabled;
 		document.getElementById('chk-grid-snap').checked = this.data.meta.grid.snap;
-
+		
 		this.canvas.width = this.data.meta.width;
 		this.canvas.height = this.data.meta.height;
-
+		
 		this.images = {};
 		this.animState = {};
-		this.selectedId = 'scene';
-
+		this.selectedIds = [];
+		
 		window.History.undoStack = [];
 		window.History.redoStack = [];
 		window.History.updateButtons();
-
+		
 		window.PropertiesPanel.update();
 		window.Treeview.render();
 		this.fitZoomToScreen();
 		this.loadAssets();
 	},
-
+	
 	setZoom: function (val) {
 		this.zoom = Math.max(0.1, Math.min(5.0, val));
 		this.canvas.style.width = (this.data.meta.width * this.zoom) + 'px';
 		this.canvas.style.height = (this.data.meta.height * this.zoom) + 'px';
 		document.getElementById('inp-zoom-percent').value = Math.round(this.zoom * 100) + '%';
 	},
-
+	
 	fitZoomToScreen: function () {
 		if (!this.wrapper || !this.data) return;
 		const availW = this.wrapper.clientWidth - 40;
@@ -173,7 +200,7 @@ window.Editor = {
 		if (newZoom > 1) newZoom = 1;
 		this.setZoom(newZoom);
 	},
-
+	
 	loadAssets: function () {
 		const promises = [];
 		if (this.data.meta.backgroundImage) promises.push(this.loadImage('bg', this.data.meta.backgroundImage));
@@ -186,7 +213,7 @@ window.Editor = {
 		}
 		return Promise.all(promises);
 	},
-
+	
 	loadImage: function (key, src) {
 		return new Promise((resolve) => {
 			if (this.images[key]) return resolve();
@@ -196,32 +223,33 @@ window.Editor = {
 			img.onerror = () => { console.warn(`Missing: ${src}`); this.images[key] = null; resolve(); };
 		});
 	},
-
+	
 	addAssetToScene: function (assetPath) {
 		if (!this.data) return;
-
+		
 		window.History.saveState();
-
+		
 		let parentId = null;
-		const selected = this.data.objects.find(o => o.id === this.selectedId);
-		if (selected) {
-			parentId = (selected.type === 'folder') ? selected.id : selected.parentId;
+		// If single selection is a folder, add to it
+		if (this.selectedIds.length === 1) {
+			const selected = this.data.objects.find(o => o.id === this.selectedIds[0]);
+			if (selected) {
+				parentId = (selected.type === 'folder') ? selected.id : selected.parentId;
+			}
 		}
-
-		// MODIFIED: Generate unique name based on filename
+		
 		const fileName = assetPath.split('/').pop().replace(/\.[^/.]+$/, "");
 		let uniqueName = fileName;
 		let suffix = 1;
-
-		// Check if name exists and append numeric suffix until unique
+		
 		while (this.data.objects.some(o => o.name === uniqueName)) {
 			uniqueName = `${fileName}_${suffix}`;
 			suffix++;
 		}
-
+		
 		const newObj = {
 			id: 'obj_' + Date.now(),
-			name: uniqueName, // NEW: Uses unique filename-based name
+			name: uniqueName,
 			type: 'static',
 			asset: assetPath,
 			parentId: parentId,
@@ -234,7 +262,7 @@ window.Editor = {
 			visible: true,
 			locked: false
 		};
-
+		
 		this.loadImage(assetPath, assetPath).then(() => {
 			const img = this.images[assetPath];
 			if (img) {
@@ -242,16 +270,16 @@ window.Editor = {
 				newObj.height = img.height;
 			}
 			this.data.objects.push(newObj);
-			this.selectedId = newObj.id;
-
+			this.selectedIds = [newObj.id];
+			
 			window.PropertiesPanel.update();
 			window.Treeview.render();
 			document.getElementById('modal-assets').style.display = 'none';
 		});
 	},
-
+	
 	// --- Rendering Loop ---
-
+	
 	gameLoop: function (timestamp) {
 		if (!this.data) {
 			requestAnimationFrame((t) => this.gameLoop(t));
@@ -263,7 +291,7 @@ window.Editor = {
 		this.render();
 		requestAnimationFrame((t) => this.gameLoop(t));
 	},
-
+	
 	updateAnimations: function (dt) {
 		this.data.objects.forEach(obj => {
 			if (obj.type !== 'sprite') return;
@@ -283,11 +311,11 @@ window.Editor = {
 			}
 		});
 	},
-
+	
 	render: function () {
 		this.ctx.fillStyle = this.data.meta.backgroundColor;
 		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
+		
 		if (this.data.meta.backgroundImage && this.images.bg) {
 			if (this.data.meta.backgroundMode === 'tile') {
 				const p = this.ctx.createPattern(this.images.bg, 'repeat');
@@ -297,15 +325,15 @@ window.Editor = {
 				this.ctx.drawImage(this.images.bg, 0, 0, this.canvas.width, this.canvas.height);
 			}
 		}
-
+		
 		if (this.data.meta.grid.enabled) this.drawGrid();
-
+		
 		const sorted = [...this.data.objects].sort((a, b) => a.zIndex - b.zIndex);
 		sorted.forEach(obj => {
 			if (!obj.visible || obj.type === 'folder') return;
 			this.ctx.save();
 			this.ctx.globalAlpha = obj.opacity;
-
+			
 			if (obj.type === 'static') {
 				const img = this.images[obj.asset];
 				if (img) this.ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
@@ -313,16 +341,20 @@ window.Editor = {
 			} else if (obj.type === 'sprite') {
 				this.drawSprite(obj);
 			}
-
-			if (this.selectedId === obj.id) {
+			
+			// Draw selection outline
+			if (this.selectedIds.includes(obj.id)) {
 				this.ctx.strokeStyle = '#00FF00'; this.ctx.lineWidth = 2;
 				this.ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
-				if (!obj.locked) this.drawResizeHandles(obj);
+				// Only draw resize handles if it's the ONLY selected object
+				if (this.selectedIds.length === 1 && !obj.locked) {
+					this.drawResizeHandles(obj);
+				}
 			}
 			this.ctx.restore();
 		});
 	},
-
+	
 	drawSprite: function (obj) {
 		const config = this.data.library.sprites[obj.spriteConfigId];
 		if (!config) return;
@@ -336,7 +368,7 @@ window.Editor = {
 		const row = Math.floor(frameId / cols);
 		this.ctx.drawImage(img, col * config.frameWidth, row * config.frameHeight, config.frameWidth, config.frameHeight, obj.x, obj.y, obj.width, obj.height);
 	},
-
+	
 	drawGrid: function () {
 		const sz = this.data.meta.grid.size;
 		this.ctx.beginPath(); this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
@@ -344,7 +376,7 @@ window.Editor = {
 		for (let y = 0; y <= this.canvas.height; y += sz) { this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvas.width, y); }
 		this.ctx.stroke();
 	},
-
+	
 	drawResizeHandles: function (obj) {
 		const handles = this.getHandleCoords(obj);
 		this.ctx.fillStyle = '#fff';
@@ -356,7 +388,7 @@ window.Editor = {
 			this.ctx.strokeRect(h.x, h.y, h.w, h.h);
 		}
 	},
-
+	
 	getHandleCoords: function (obj) {
 		const s = this.HANDLE_SIZE / this.zoom;
 		return {
@@ -366,7 +398,7 @@ window.Editor = {
 			br: { x: obj.x + obj.width - s / 2, y: obj.y + obj.height - s / 2, w: s, h: s }
 		};
 	},
-
+	
 	getMousePos: function (e) {
 		const r = this.canvas.getBoundingClientRect();
 		const scaleX = this.canvas.width / r.width;
@@ -376,16 +408,16 @@ window.Editor = {
 			y: (e.clientY - r.top) * scaleY
 		};
 	},
-
+	
 	// --- Input Handling ---
-
+	
 	handleMouseDown: function (e) {
 		if (!this.data) return;
 		const pos = this.getMousePos(e);
-
-		// Check Resize Handles
-		if (this.selectedId && this.selectedId !== 'scene') {
-			const obj = this.data.objects.find(o => o.id === this.selectedId);
+		
+		// Check Resize Handles (Only if 1 item selected)
+		if (this.selectedIds.length === 1) {
+			const obj = this.data.objects.find(o => o.id === this.selectedIds[0]);
 			if (obj && !obj.locked && obj.type !== 'folder') {
 				const handles = this.getHandleCoords(obj);
 				for (const key in handles) {
@@ -399,35 +431,62 @@ window.Editor = {
 				}
 			}
 		}
-
-		// MODIFIED: Check Object Selection with Z-Index, Visibility, and Lock priority
+		
+		// Object Selection Logic
 		const sorted = [...this.data.objects]
-			.filter(o => o.visible && !o.locked && o.type !== 'folder') // NEW: Filter out hidden/locked/folders
-			.sort((a, b) => b.zIndex - a.zIndex); // NEW: Highest Z-index first
-
+			.filter(o => o.visible && !o.locked && o.type !== 'folder')
+			.sort((a, b) => b.zIndex - a.zIndex);
+		
 		const clicked = sorted.find(o => pos.x >= o.x && pos.x <= o.x + o.width && pos.y >= o.y && pos.y <= o.y + o.height);
-
+		
 		if (clicked) {
-			this.selectedId = clicked.id;
-			// Note: Filter already handles !locked, but we keep the safety check
-			if (!clicked.locked) {
+			const isMultiSelect = e.ctrlKey || e.shiftKey || e.metaKey;
+			
+			if (isMultiSelect) {
+				// Toggle selection
+				if (this.selectedIds.includes(clicked.id)) {
+					this.selectedIds = this.selectedIds.filter(id => id !== clicked.id);
+				} else {
+					this.selectedIds.push(clicked.id);
+				}
+			} else {
+				// If clicked item is not in current selection, reset selection to just this item
+				// If it IS in current selection, keep selection (allows dragging group)
+				if (!this.selectedIds.includes(clicked.id)) {
+					this.selectedIds = [clicked.id];
+				}
+			}
+			
+			// Initiate Dragging
+			if (this.selectedIds.length > 0) {
 				window.History.saveState();
 				this.isDragging = true;
-				this.dragOffset = { x: pos.x - clicked.x, y: pos.y - clicked.y };
+				this.dragOffsets = {};
+				// Calculate offsets for all selected items relative to mouse
+				this.selectedIds.forEach(id => {
+					const o = this.data.objects.find(obj => obj.id === id);
+					if (o) {
+						this.dragOffsets[id] = { x: pos.x - o.x, y: pos.y - o.y };
+					}
+				});
 			}
 		} else {
-			this.selectedId = 'scene';
+			// Clicked empty space
+			if (!e.ctrlKey && !e.shiftKey && !e.metaKey) {
+				this.selectedIds = [];
+			}
 		}
-
+		
 		window.PropertiesPanel.update();
 		window.Treeview.render();
 	},
-
+	
 	handleMouseMove: function (e) {
 		const pos = this.getMousePos(e);
-
-		if (this.resizingHandle) {
-			const obj = this.data.objects.find(o => o.id === this.selectedId);
+		
+		// Resizing (Single object only)
+		if (this.resizingHandle && this.selectedIds.length === 1) {
+			const obj = this.data.objects.find(o => o.id === this.selectedIds[0]);
 			if (!obj) return;
 			const dx = pos.x - this.resizeStart.mx;
 			const ratio = this.resizeStart.w / this.resizeStart.h;
@@ -435,7 +494,7 @@ window.Editor = {
 			let newH = this.resizeStart.h;
 			let newX = this.resizeStart.x;
 			let newY = this.resizeStart.y;
-
+			
 			if (this.resizingHandle === 'br') {
 				newW = this.resizeStart.w + dx;
 				newH = this.aspectLocked ? newW / ratio : this.resizeStart.h + (pos.y - this.resizeStart.my);
@@ -453,46 +512,57 @@ window.Editor = {
 				newH = this.aspectLocked ? newW / ratio : this.resizeStart.h - (pos.y - this.resizeStart.my);
 				newY = this.aspectLocked ? this.resizeStart.y - (newH - this.resizeStart.h) : pos.y;
 			}
-
+			
 			if (newW > 5 && newH > 5) {
 				obj.width = newW; obj.height = newH; obj.x = newX; obj.y = newY;
 				window.PropertiesPanel.update();
 			}
 			return;
 		}
-
-		if (!this.isDragging || !this.selectedId || this.selectedId === 'scene') return;
-		const obj = this.data.objects.find(o => o.id === this.selectedId);
-		if (!obj) return;
-		let nx = pos.x - this.dragOffset.x;
-		let ny = pos.y - this.dragOffset.y;
-		if (this.data.meta.grid.snap) {
-			const sz = this.data.meta.grid.size;
-			nx = Math.round(nx / sz) * sz;
-			ny = Math.round(ny / sz) * sz;
+		
+		// Dragging (Multi-object support)
+		if (this.isDragging && this.selectedIds.length > 0) {
+			this.selectedIds.forEach(id => {
+				const obj = this.data.objects.find(o => o.id === id);
+				if (!obj || obj.locked) return;
+				
+				const offset = this.dragOffsets[id];
+				if (!offset) return;
+				
+				let nx = pos.x - offset.x;
+				let ny = pos.y - offset.y;
+				
+				if (this.data.meta.grid.snap) {
+					const sz = this.data.meta.grid.size;
+					nx = Math.round(nx / sz) * sz;
+					ny = Math.round(ny / sz) * sz;
+				}
+				
+				obj.x = nx;
+				obj.y = ny;
+			});
+			window.PropertiesPanel.update();
 		}
-		obj.x = nx; obj.y = ny;
-		window.PropertiesPanel.update();
 	},
-
+	
 	handleMouseUp: function () {
 		this.isDragging = false;
 		this.resizingHandle = null;
 	},
-
+	
 	// --- Object Actions ---
-
+	
 	fitObjectToScene: function (id) {
 		const obj = this.data.objects.find(o => o.id === id);
 		if (!obj || obj.type === 'folder') return;
-
+		
 		window.History.saveState();
-
+		
 		const sceneW = this.data.meta.width;
 		const sceneH = this.data.meta.height;
 		const objRatio = obj.width / obj.height;
 		const sceneRatio = sceneW / sceneH;
-
+		
 		if (objRatio > sceneRatio) {
 			obj.width = sceneW; obj.height = sceneW / objRatio;
 			obj.x = 0; obj.y = (sceneH - obj.height) / 2;
@@ -502,19 +572,49 @@ window.Editor = {
 		}
 		window.PropertiesPanel.update();
 	},
-
+	
 	deleteObject: async function (id) {
-		const index = this.data.objects.findIndex(o => o.id === id);
-		if (index !== -1) {
-			const confirmed = await this.confirm('Are you sure you want to delete this?');
-			if (confirmed) {
-				window.History.saveState();
-				this.data.objects.splice(index, 1);
-				this.selectedId = 'scene';
-				window.PropertiesPanel.update();
-				window.Treeview.render();
-			}
+		// Wrapper for single delete button
+		this.selectedIds = [id];
+		this.deleteSelected();
+	},
+	
+	deleteSelected: async function () {
+		if (this.selectedIds.length === 0) return;
+		
+		const confirmed = await this.confirm(`Delete ${this.selectedIds.length} item(s)?`);
+		if (confirmed) {
+			window.History.saveState();
+			this.data.objects = this.data.objects.filter(o => !this.selectedIds.includes(o.id));
+			this.selectedIds = [];
+			window.PropertiesPanel.update();
+			window.Treeview.render();
 		}
+	},
+	
+	duplicateSelected: function () {
+		if (this.selectedIds.length === 0) return;
+		
+		window.History.saveState();
+		
+		const newIds = [];
+		const objectsToDuplicate = this.data.objects.filter(o => this.selectedIds.includes(o.id));
+		
+		objectsToDuplicate.forEach(obj => {
+			// Deep clone
+			const clone = JSON.parse(JSON.stringify(obj));
+			clone.id = 'obj_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+			clone.name += '_copy';
+			clone.x += 20; // Offset slightly
+			clone.y += 20;
+			this.data.objects.push(clone);
+			newIds.push(clone.id);
+		});
+		
+		// Select the new copies
+		this.selectedIds = newIds;
+		window.PropertiesPanel.update();
+		window.Treeview.render();
 	}
 };
 
