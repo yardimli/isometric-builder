@@ -82,14 +82,26 @@ window.Treeview = {
                 window.Editor.selectedIds = [];
             } else {
                 const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
-                if (isMulti) {
-                    if (window.Editor.selectedIds.includes(obj.id)) {
-                        window.Editor.selectedIds = window.Editor.selectedIds.filter(id => id !== obj.id);
+                
+                // Special logic: If clicking a folder, select all assets within it
+                if (obj.type === 'folder' && !isMulti) {
+                    const childIds = this.getAllDescendants(obj.id);
+                    // If folder has no children, select the folder itself so it can be deleted/renamed
+                    if (childIds.length > 0) {
+                        window.Editor.selectedIds = childIds;
                     } else {
-                        window.Editor.selectedIds.push(obj.id);
+                        window.Editor.selectedIds = [obj.id];
                     }
                 } else {
-                    window.Editor.selectedIds = [obj.id];
+                    if (isMulti) {
+                        if (window.Editor.selectedIds.includes(obj.id)) {
+                            window.Editor.selectedIds = window.Editor.selectedIds.filter(id => id !== obj.id);
+                        } else {
+                            window.Editor.selectedIds.push(obj.id);
+                        }
+                    } else {
+                        window.Editor.selectedIds = [obj.id];
+                    }
                 }
             }
             window.PropertiesPanel.update();
@@ -131,6 +143,19 @@ window.Treeview = {
         };
         
         return el;
+    },
+    
+    getAllDescendants: function (parentId) {
+        let ids = [];
+        const children = window.Editor.data.objects.filter(o => o.parentId === parentId);
+        children.forEach(child => {
+            if (child.type === 'folder') {
+                ids = ids.concat(this.getAllDescendants(child.id));
+            } else {
+                ids.push(child.id);
+            }
+        });
+        return ids;
     },
     
     toggleCollapse: function (id) {

@@ -437,6 +437,62 @@ window.Editor = {
 		if (window.Interaction) {
 			window.Interaction.duplicateSelected();
 		}
+	},
+	
+	// --- Grouping Logic ---
+	
+	groupSelected: async function () {
+		if (this.selectedIds.length < 2) return;
+		
+		// Calculate default group name (group1, group2...)
+		let groupIndex = 1;
+		while (this.data.objects.some(o => o.name === `group${groupIndex}`)) {
+			groupIndex++;
+		}
+		const defaultName = `group${groupIndex}`;
+		
+		const name = await this.prompt('Enter group name:', defaultName);
+		if (!name) return;
+		
+		window.History.saveState();
+		
+		const newFolder = {
+			id: 'folder_' + Date.now(),
+			name: name,
+			type: 'folder',
+			parentId: null, // Default to root, or infer from common parent?
+			zIndex: 0,
+			visible: true,
+			locked: false
+		};
+		
+		// Determine common parent if possible, otherwise root
+		const firstObj = this.data.objects.find(o => o.id === this.selectedIds[0]);
+		if (firstObj) newFolder.parentId = firstObj.parentId;
+		
+		this.data.objects.push(newFolder);
+		
+		// Move selected items into new folder
+		this.selectedIds.forEach(id => {
+			const obj = this.data.objects.find(o => o.id === id);
+			if (obj) obj.parentId = newFolder.id;
+		});
+		
+		// Select the new folder
+		this.selectedIds = [newFolder.id];
+		window.Treeview.render();
+		window.PropertiesPanel.update();
+	},
+	
+	toggleMultiProperty: function (prop, value) {
+		if (this.selectedIds.length === 0) return;
+		window.History.saveState();
+		this.selectedIds.forEach(id => {
+			const obj = this.data.objects.find(o => o.id === id);
+			if (obj) obj[prop] = value;
+		});
+		window.Treeview.render(); // Updates icons if needed
+		window.PropertiesPanel.update();
 	}
 };
 

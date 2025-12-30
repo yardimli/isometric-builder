@@ -56,7 +56,6 @@
 		</div>
 		
 		<div class="properties-panel">
-			<h3>Properties</h3>
 			<div id="prop-content" class="prop-group">
 				<p class="hint">Select an object or the scene.</p>
 			</div>
@@ -101,7 +100,7 @@
 	</div>
 </div>
 
-<!-- CUSTOM DIALOGS (New) -->
+<!-- CUSTOM DIALOGS -->
 <dialog id="dlg-alert" class="custom-dialog">
 	<p id="dlg-alert-msg"></p>
 	<button id="dlg-alert-close" type="button">OK</button>

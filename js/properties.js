@@ -60,6 +60,12 @@ window.PropertiesPanel = {
         const isFolder = obj.type === 'folder';
         const hasChildren = window.Editor.data.objects.some(o => o.parentId === obj.id);
         const canDelete = !isFolder || !hasChildren;
+        const sceneW = window.Editor.data.meta.width;
+        const sceneH = window.Editor.data.meta.height;
+        
+        // Calculate Percentages
+        const widthPct = sceneW > 0 ? ((obj.width / sceneW) * 100).toFixed(2) : 0;
+        const heightPct = sceneH > 0 ? ((obj.height / sceneH) * 100).toFixed(2) : 0;
         
         this.container.innerHTML = `
       <h4>${isFolder ? 'Folder' : 'Object'} Properties</h4>
@@ -78,11 +84,25 @@ window.PropertiesPanel = {
           <div><label>X</label><input type="number" value="${Math.round(obj.x)}" onchange="PropertiesPanel.updateProp('${obj.id}', 'x', Number(this.value))"></div>
           <div><label>Y</label><input type="number" value="${Math.round(obj.y)}" onchange="PropertiesPanel.updateProp('${obj.id}', 'y', Number(this.value))"></div>
         </div>
+        
         <div class="prop-row-dual">
-          <div><label>Width</label><input type="number" value="${Math.round(obj.width)}" onchange="PropertiesPanel.updateProp('${obj.id}', 'width', Number(this.value))"></div>
+          <div>
+            <label>Width</label>
+            <div class="unit-group">
+                <input type="number" value="${Math.round(obj.width)}" onchange="PropertiesPanel.updateProp('${obj.id}', 'width', Number(this.value))">
+                <input type="number" value="${widthPct}" onchange="PropertiesPanel.updatePropPct('${obj.id}', 'width', Number(this.value))" title="% of Scene Width">
+            </div>
+          </div>
           <button class="btn-lock-aspect ${window.Editor.aspectLocked ? 'active' : ''}" onclick="PropertiesPanel.toggleAspect()" title="Lock Aspect Ratio">🔗</button>
-          <div><label>Height</label><input type="number" value="${Math.round(obj.height)}" onchange="PropertiesPanel.updateProp('${obj.id}', 'height', Number(this.value))"></div>
+          <div>
+            <label>Height</label>
+            <div class="unit-group">
+                <input type="number" value="${Math.round(obj.height)}" onchange="PropertiesPanel.updateProp('${obj.id}', 'height', Number(this.value))">
+                <input type="number" value="${heightPct}" onchange="PropertiesPanel.updatePropPct('${obj.id}', 'height', Number(this.value))" title="% of Scene Height">
+            </div>
+          </div>
         </div>
+
         <div class="prop-row">
           <label>Opacity</label>
           <div class="opacity-ctrl">
@@ -110,7 +130,17 @@ window.PropertiesPanel = {
                 <span class="multi-select-count">${ids.length}</span>
                 items selected
             </div>
+
+            <div class="multi-actions">
+                <button onclick="Editor.toggleMultiProperty('visible', false)">Hide All</button>
+                <button onclick="Editor.toggleMultiProperty('visible', true)">Show All</button>
+            </div>
+            <div class="multi-actions">
+                <button onclick="Editor.toggleMultiProperty('locked', true)">Lock All</button>
+                <button onclick="Editor.toggleMultiProperty('locked', false)">Unlock All</button>
+            </div>
             
+            <button class="primary-btn" style="width:100%; margin-top:10px;" onclick="Editor.groupSelected()">Group Selected</button>
             <button class="primary-btn" style="width:100%; margin-top:10px;" onclick="Editor.duplicateSelected()">Duplicate All</button>
             <button class="primary-btn btn-delete" style="width:100%; margin-top:10px;" onclick="Editor.deleteSelected()">Delete All</button>
         `;
@@ -135,6 +165,17 @@ window.PropertiesPanel = {
         
         if (key === 'name' || key === 'zIndex') window.Treeview.render();
         if (key !== 'opacity') this.update();
+    },
+    
+    updatePropPct: function (id, key, pctVal) {
+        const sceneW = window.Editor.data.meta.width;
+        const sceneH = window.Editor.data.meta.height;
+        let pxVal = 0;
+        
+        if (key === 'width') pxVal = (pctVal / 100) * sceneW;
+        if (key === 'height') pxVal = (pctVal / 100) * sceneH;
+        
+        this.updateProp(id, key, pxVal);
     },
     
     updateSceneProp: function (key, val) {
