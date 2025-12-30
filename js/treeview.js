@@ -7,6 +7,8 @@ window.Treeview = {
     container: null,
     collapsedNodes: new Set(),
     draggedId: null,
+    dropTargetId: null,
+    dropPosition: null, // 'before', 'inside', 'after'
     
     init: function () {
         this.container = document.getElementById('treeview-content');
@@ -35,8 +37,12 @@ window.Treeview = {
     },
     
     renderChildren: function (parentId, container) {
+        // Filter by parent
         const objects = window.Editor.data.objects.filter(obj => obj.parentId === parentId);
-        objects.sort((a, b) => b.zIndex - a.zIndex);
+        
+        // IMPORTANT: Do NOT sort by Z-Index here.
+        // We want the Treeview to reflect the array order (drawing order).
+        // The user can reorder items in the tree to change drawing order.
         
         objects.forEach(obj => {
             const wrapper = document.createElement('div');
@@ -119,6 +125,8 @@ window.Treeview = {
             };
             el.ondragend = () => {
                 this.draggedId = null;
+                this.dropTargetId = null;
+                this.dropPosition = null;
                 this.render();
             };
         }
@@ -126,21 +134,45 @@ window.Treeview = {
         el.ondragover = (e) => {
             e.preventDefault();
             if (this.draggedId === obj.id) return;
-            if (obj.type === 'folder' || obj.id === 'scene') {
-                el.classList.add('drag-over-child');
+            
+            const rect = el.getBoundingClientRect();
+            const relY = e.clientY - rect.top;
+            const height = rect.height;
+            
+            // Reset classes
+            el.classList.remove('drag-over', 'drag-top', 'drag-bottom', 'drag-over-child');
+            
+            // Determine Drop Position
+            // Top 25%: Insert Before
+            // Bottom 25%: Insert After
+            // Middle 50%: Nest (if folder/scene)
+            if (relY < height * 0.25) {
+                this.dropPosition = 'before';
+                el.classList.add('drag-top');
+            } else if (relY > height * 0.75) {
+                this.dropPosition = 'after';
+                el.classList.add('drag-bottom');
             } else {
-                el.classList.add('drag-over');
+                if (obj.type === 'folder' || obj.id === 'scene') {
+                    this.dropPosition = 'inside';
+                    el.classList.add('drag-over');
+                } else {
+                    // If hovering middle of non-folder, default to after
+                    this.dropPosition = 'after';
+                    el.classList.add('drag-bottom');
+                }
             }
+            this.dropTargetId = obj.id;
         };
         
         el.ondragleave = () => {
-            el.classList.remove('drag-over', 'drag-over-child');
+            el.classList.remove('drag-over', 'drag-top', 'drag-bottom', 'drag-over-child');
         };
         
         el.ondrop = (e) => {
             e.preventDefault();
-            const droppedId = e.dataTransfer.getData('text/plain');
-            this.handleDrop(droppedId, obj.id);
+            const draggedId = e.dataTransfer.getData('text/plain');
+            this.handleDrop(draggedId, obj.id);
         };
         
         return el;
@@ -166,24 +198,55 @@ window.Treeview = {
     },
     
     handleDrop: function (draggedId, targetId) {
+        if (!draggedId || !targetId || draggedId === targetId) return;
+        
         const objects = window.Editor.data.objects;
         const draggedObj = objects.find(o => o.id === draggedId);
         const targetObj = objects.find(o => o.id === targetId);
         
         if (!draggedObj) return;
         
-        if (targetId === 'scene' || (targetObj && targetObj.type === 'folder')) {
-            if (this.isDescendant(draggedId, targetId)) return;
+        // Prevent dragging parent into child
+        if (this.isDescendant(draggedId, targetId)) return;
+        
+        window.History.saveState();
+        
+        // 1. Remove dragged object from current array position
+        const oldIndex = objects.indexOf(draggedObj);
+        if (oldIndex > -1) {
+            objects.splice(oldIndex, 1);
+        }
+        
+        // 2. Determine new position and parent
+        if (this.dropPosition === 'inside') {
+            // Nesting
             draggedObj.parentId = (targetId === 'scene') ? null : targetId;
-        } else if (targetObj) {
-            draggedObj.parentId = targetObj.parentId;
+            // Add to end of list (top of stack visually)
+            objects.push(draggedObj);
+        } else {
+            // Reordering (Before or After)
+            // Target object determines the parent
+            draggedObj.parentId = targetObj ? targetObj.parentId : null;
+            
+            // Find index of target object (it might have shifted if we removed draggedObj)
+            const targetIndex = objects.indexOf(targetObj);
+            let newIndex = targetIndex;
+            
+            if (this.dropPosition === 'after') {
+                newIndex = targetIndex + 1;
+            }
+            
+            // Insert at new index
+            objects.splice(newIndex, 0, draggedObj);
         }
         
         window.PropertiesPanel.update();
         this.render();
+        window.Editor.render(); // Update canvas to reflect new order
     },
     
     isDescendant: function (parentCandidateId, childId) {
+        if (childId === 'scene') return false;
         const objects = window.Editor.data.objects;
         let current = objects.find(o => o.id === childId);
         while (current && current.parentId) {

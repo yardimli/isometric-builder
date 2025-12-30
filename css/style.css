@@ -1,3 +1,5 @@
+/* css/style.css */
+
 :root {
     --bg-dark: #1e1e1e;
     --bg-panel: #252526;
@@ -117,18 +119,25 @@ input[type="number"] { max-width: 100px; }
     gap: 5px;
     user-select: none;
     position: relative;
-    border: 1px solid transparent;
+    border: 1px solid transparent; /* Ensure border exists for layout stability */
+    box-sizing: border-box;
 }
 
 /* Drag and Drop Visuals */
+/* New: Drop Inside (Folder) */
 .tree-item.drag-over {
-    border-top: 2px solid var(--accent);
-    background: rgba(0, 122, 204, 0.1);
-}
-
-.tree-item.drag-over-child {
     background: rgba(0, 122, 204, 0.2);
     border: 1px dashed var(--accent);
+}
+
+/* New: Drop Before (Top Line) */
+.tree-item.drag-top {
+    border-top: 2px solid var(--accent);
+}
+
+/* New: Drop After (Bottom Line) */
+.tree-item.drag-bottom {
+    border-bottom: 2px solid var(--accent);
 }
 
 .tree-item:hover { background: #2a2d2e; }

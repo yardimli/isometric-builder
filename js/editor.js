@@ -320,8 +320,19 @@ window.Editor = {
 		
 		if (this.data.meta.grid.enabled) this.drawGrid();
 		
-		const sorted = [...this.data.objects].sort((a, b) => a.zIndex - b.zIndex);
-		sorted.forEach(obj => {
+		// Updated Sort Logic:
+		// 1. Z-Index (ascending)
+		// 2. Array Index (ascending) - This ensures Tree Order dictates drawing order for same Z-Index
+		const sorted = this.data.objects.map((obj, index) => ({ obj, index }));
+		sorted.sort((a, b) => {
+			if (a.obj.zIndex !== b.obj.zIndex) {
+				return a.obj.zIndex - b.obj.zIndex;
+			}
+			return a.index - b.index;
+		});
+		
+		sorted.forEach(item => {
+			const obj = item.obj;
 			if (!obj.visible || obj.type === 'folder') return;
 			this.ctx.save();
 			this.ctx.globalAlpha = obj.opacity;
