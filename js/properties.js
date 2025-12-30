@@ -1,181 +1,75 @@
 /**
  * js/properties.js
  * Handles the rendering and logic for the Properties Panel.
+ * Now manipulates static HTML elements from index.php instead of regenerating DOM.
  */
 
 window.PropertiesPanel = {
-    container: null,
+    // Panel References
+    panelEmpty: null,
+    panelScene: null,
+    panelObject: null,
+    panelMulti: null,
     
     init: function () {
-        this.container = document.getElementById('prop-content');
+        this.panelEmpty = document.getElementById('prop-empty');
+        this.panelScene = document.getElementById('prop-scene');
+        this.panelObject = document.getElementById('prop-object');
+        this.panelMulti = document.getElementById('prop-multi');
+        
+        // Populate Scene Presets
+        const presetSelect = document.getElementById('sel-scene-preset');
+        if (presetSelect && window.Editor && window.Editor.resolutions) {
+            let opts = '';
+            for (const name in window.Editor.resolutions) {
+                opts += `<option value="${name}">${name}</option>`;
+            }
+            presetSelect.innerHTML = opts;
+        }
     },
     
     /**
-     * Main render function for the panel.
+     * Main update function. Determines which panel to show.
      */
     update: function () {
         if (!window.Editor || !window.Editor.data) return;
         
         const selectedIds = window.Editor.selectedIds;
         
+        // Hide all panels first
+        this.panelEmpty.style.display = 'none';
+        this.panelScene.style.display = 'none';
+        this.panelObject.style.display = 'none';
+        this.panelMulti.style.display = 'none';
+        
         if (selectedIds.length === 0) {
-            this.renderSceneProperties();
+            // Nothing selected
+            this.panelEmpty.style.display = 'block';
         } else if (selectedIds.length === 1) {
-            this.renderObjectProperties(selectedIds[0]);
+            const id = selectedIds[0];
+            if (id === 'scene') {
+                this.updateSceneView();
+                this.panelScene.style.display = 'block';
+            } else {
+                this.updateObjectView(id);
+                this.panelObject.style.display = 'block';
+            }
         } else {
-            this.renderMultiSelection(selectedIds);
+            // Multi-selection
+            this.updateMultiView(selectedIds);
+            this.panelMulti.style.display = 'block';
         }
     },
     
-    renderSceneProperties: function () {
+    // --- Scene View Logic ---
+    
+    updateSceneView: function () {
         const meta = window.Editor.data.meta;
-        let presetOpts = '';
-        for (const name in window.Editor.resolutions) {
-            presetOpts += `<option value="${name}">${name}</option>`;
-        }
-        
-        this.container.innerHTML = `
-      <h4>Scene Properties</h4>
-      <div class="prop-row">
-        <label>Name</label>
-        <input value="${meta.sceneName}" onchange="PropertiesPanel.updateSceneProp('sceneName', this.value)">
-      </div>
-      <div class="prop-row">
-        <label>Preset Size</label>
-        <select onchange="PropertiesPanel.applyResolutionPreset(this.value)">${presetOpts}</select>
-      </div>
-      <div class="prop-row-dual">
-        <div><label>Width</label><input type="number" value="${meta.width}" onchange="PropertiesPanel.updateSceneProp('width', Number(this.value))"></div>
-        <div><label>Height</label><input type="number" value="${meta.height}" onchange="PropertiesPanel.updateSceneProp('height', Number(this.value))"></div>
-      </div>
-      <div class="prop-row"><label>Bg Color</label><input type="color" value="${meta.backgroundColor}" onchange="PropertiesPanel.updateSceneProp('backgroundColor', this.value)"></div>
-      <div class="prop-row"><label>Grid Size</label><input type="number" value="${meta.grid.size}" onchange="PropertiesPanel.updateSceneProp('gridSize', Number(this.value))"></div>
-    `;
-    },
-    
-    renderObjectProperties: function (id) {
-        const obj = window.Editor.data.objects.find(o => o.id === id);
-        if (!obj) return;
-        
-        const isFolder = obj.type === 'folder';
-        const hasChildren = window.Editor.data.objects.some(o => o.parentId === obj.id);
-        const canDelete = !isFolder || !hasChildren;
-        const sceneW = window.Editor.data.meta.width;
-        const sceneH = window.Editor.data.meta.height;
-        
-        // Calculate Percentages
-        const widthPct = sceneW > 0 ? ((obj.width / sceneW) * 100).toFixed(2) : 0;
-        const heightPct = sceneH > 0 ? ((obj.height / sceneH) * 100).toFixed(2) : 0;
-        
-        this.container.innerHTML = `
-      <h4>${isFolder ? 'Folder' : 'Object'} Properties</h4>
-      <div class="prop-row">
-        <label>Name</label>
-        <input value="${obj.name}" onchange="PropertiesPanel.updateProp('${obj.id}', 'name', this.value)">
-      </div>
-      
-      <div class="prop-row-check">
-        <label><input type="checkbox" ${obj.visible ? 'checked' : ''} onchange="PropertiesPanel.updateProp('${obj.id}', 'visible', this.checked)"> Visible</label>
-        <label><input type="checkbox" ${obj.locked ? 'checked' : ''} onchange="PropertiesPanel.updateProp('${obj.id}', 'locked', this.checked)"> Locked</label>
-      </div>
-
-      ${!isFolder ? `
-        <div class="prop-row-dual" style="margin-top:10px;">
-          <div><label>X</label><input type="number" value="${Math.round(obj.x)}" onchange="PropertiesPanel.updateProp('${obj.id}', 'x', Number(this.value))"></div>
-          <div><label>Y</label><input type="number" value="${Math.round(obj.y)}" onchange="PropertiesPanel.updateProp('${obj.id}', 'y', Number(this.value))"></div>
-        </div>
-        
-        <div class="prop-row-dual">
-          <div>
-            <label>Width</label>
-            <div class="unit-group">
-                <input type="number" value="${Math.round(obj.width)}" onchange="PropertiesPanel.updateProp('${obj.id}', 'width', Number(this.value))">
-                <input type="number" value="${widthPct}" onchange="PropertiesPanel.updatePropPct('${obj.id}', 'width', Number(this.value))" title="% of Scene Width">
-            </div>
-          </div>
-          <button class="btn-lock-aspect ${window.Editor.aspectLocked ? 'active' : ''}" onclick="PropertiesPanel.toggleAspect()" title="Lock Aspect Ratio">🔗</button>
-          <div>
-            <label>Height</label>
-            <div class="unit-group">
-                <input type="number" value="${Math.round(obj.height)}" onchange="PropertiesPanel.updateProp('${obj.id}', 'height', Number(this.value))">
-                <input type="number" value="${heightPct}" onchange="PropertiesPanel.updatePropPct('${obj.id}', 'height', Number(this.value))" title="% of Scene Height">
-            </div>
-          </div>
-        </div>
-
-        <div class="prop-row">
-          <label>Opacity</label>
-          <div class="opacity-ctrl">
-            <input type="range" min="0" max="1" step="0.01" value="${obj.opacity}" oninput="PropertiesPanel.updateProp('${obj.id}', 'opacity', Number(this.value), true)">
-            <input type="number" min="0" max="1" step="0.1" value="${obj.opacity}" onchange="PropertiesPanel.updateProp('${obj.id}', 'opacity', Number(this.value))">
-          </div>
-        </div>
-      ` : ''}
-
-      <div class="prop-row"><label>Z-Index</label><input type="number" value="${obj.zIndex}" onchange="PropertiesPanel.updateProp('${obj.id}', 'zIndex', Number(this.value))"></div>
-      
-      <button class="primary-btn" style="width:100%; margin-top:20px;" onclick="Editor.duplicateSelected()">Duplicate</button>
-      <button class="primary-btn btn-delete" style="width:100%; margin-top:10px;" ${!canDelete ? 'disabled title="Only empty folders can be deleted"' : ''} onclick="Editor.deleteObject('${obj.id}')">
-        Delete ${isFolder ? 'Folder' : 'Asset'}
-      </button>
-      
-      ${!isFolder ? `<button class="primary-btn" style="width:100%; margin-top:10px;" onclick="Editor.fitObjectToScene('${obj.id}')">Fit to Scene</button>` : ''}
-    `;
-    },
-    
-    renderMultiSelection: function (ids) {
-        this.container.innerHTML = `
-            <h4>Multi-Selection</h4>
-            <div class="multi-select-info">
-                <span class="multi-select-count">${ids.length}</span>
-                items selected
-            </div>
-
-            <div class="multi-actions">
-                <button onclick="Editor.toggleMultiProperty('visible', false)">Hide All</button>
-                <button onclick="Editor.toggleMultiProperty('visible', true)">Show All</button>
-            </div>
-            <div class="multi-actions">
-                <button onclick="Editor.toggleMultiProperty('locked', true)">Lock All</button>
-                <button onclick="Editor.toggleMultiProperty('locked', false)">Unlock All</button>
-            </div>
-            
-            <button class="primary-btn" style="width:100%; margin-top:10px;" onclick="Editor.groupSelected()">Group Selected</button>
-            <button class="primary-btn" style="width:100%; margin-top:10px;" onclick="Editor.duplicateSelected()">Duplicate All</button>
-            <button class="primary-btn btn-delete" style="width:100%; margin-top:10px;" onclick="Editor.deleteSelected()">Delete All</button>
-        `;
-    },
-    
-    updateProp: function (id, key, val, isContinuous = false) {
-        const obj = window.Editor.data.objects.find(o => o.id === id);
-        if (!obj) return;
-        
-        // Save state for history before modification (if not continuous like a slider)
-        if (!isContinuous) window.History.saveState();
-        
-        const oldW = obj.width;
-        const oldH = obj.height;
-        obj[key] = val;
-        
-        if (window.Editor.aspectLocked && obj.type !== 'folder') {
-            const ratio = oldW / oldH;
-            if (key === 'width') obj.height = val / ratio;
-            if (key === 'height') obj.width = val * ratio;
-        }
-        
-        if (key === 'name' || key === 'zIndex') window.Treeview.render();
-        if (key !== 'opacity') this.update();
-    },
-    
-    updatePropPct: function (id, key, pctVal) {
-        const sceneW = window.Editor.data.meta.width;
-        const sceneH = window.Editor.data.meta.height;
-        let pxVal = 0;
-        
-        if (key === 'width') pxVal = (pctVal / 100) * sceneW;
-        if (key === 'height') pxVal = (pctVal / 100) * sceneH;
-        
-        this.updateProp(id, key, pxVal);
+        document.getElementById('inp-scene-name').value = meta.sceneName;
+        document.getElementById('inp-scene-w').value = meta.width;
+        document.getElementById('inp-scene-h').value = meta.height;
+        document.getElementById('inp-scene-bg').value = meta.backgroundColor;
+        document.getElementById('inp-scene-grid').value = meta.grid.size;
     },
     
     updateSceneProp: function (key, val) {
@@ -196,16 +90,142 @@ window.PropertiesPanel = {
     applyResolutionPreset: function (name) {
         const res = window.Editor.resolutions[name];
         if (res && res.w > 0) {
-            this.updateSceneProp('width', res.w);
-            this.updateSceneProp('height', res.h);
-            this.update();
+            // Batch update without separate history states if possible, or just save once
+            window.History.saveState();
+            window.Editor.data.meta.width = res.w;
+            window.Editor.data.meta.height = res.h;
+            window.Editor.canvas.width = res.w;
+            window.Editor.canvas.height = res.h;
+            window.Editor.setZoom(window.Editor.zoom);
             window.Editor.fitZoomToScreen();
+            this.updateSceneView();
+        }
+    },
+    
+    // --- Object View Logic ---
+    
+    updateObjectView: function (id) {
+        const obj = window.Editor.data.objects.find(o => o.id === id);
+        if (!obj) return;
+        
+        const isFolder = obj.type === 'folder';
+        const hasChildren = window.Editor.data.objects.some(o => o.parentId === obj.id);
+        const canDelete = !isFolder || !hasChildren;
+        const sceneW = window.Editor.data.meta.width;
+        const sceneH = window.Editor.data.meta.height;
+        
+        // Header
+        document.getElementById('lbl-obj-type').innerText = isFolder ? 'Folder Properties' : 'Object Properties';
+        
+        // Common Props
+        document.getElementById('inp-obj-name').value = obj.name;
+        document.getElementById('chk-obj-visible').checked = obj.visible;
+        document.getElementById('chk-obj-locked').checked = obj.locked;
+        document.getElementById('inp-obj-z').value = obj.zIndex;
+        
+        // Transform Group (Hide for folders)
+        const transformGroup = document.getElementById('grp-obj-transform');
+        const fitBtn = document.getElementById('btn-obj-fit');
+        
+        if (isFolder) {
+            transformGroup.style.display = 'none';
+            fitBtn.style.display = 'none';
+        } else {
+            transformGroup.style.display = 'block';
+            fitBtn.style.display = 'block';
+            
+            // Values
+            document.getElementById('inp-obj-x').value = Math.round(obj.x);
+            document.getElementById('inp-obj-y').value = Math.round(obj.y);
+            document.getElementById('inp-obj-w').value = Math.round(obj.width);
+            document.getElementById('inp-obj-h').value = Math.round(obj.height);
+            
+            // Percentages
+            const widthPct = sceneW > 0 ? ((obj.width / sceneW) * 100).toFixed(2) : 0;
+            const heightPct = sceneH > 0 ? ((obj.height / sceneH) * 100).toFixed(2) : 0;
+            document.getElementById('inp-obj-w-pct').value = widthPct;
+            document.getElementById('inp-obj-h-pct').value = heightPct;
+            
+            // Opacity
+            document.getElementById('rng-obj-opacity').value = obj.opacity;
+            document.getElementById('inp-obj-opacity').value = obj.opacity;
+            
+            // Aspect Lock Button State
+            const lockBtn = document.getElementById('btn-aspect-lock');
+            if (window.Editor.aspectLocked) lockBtn.classList.add('active');
+            else lockBtn.classList.remove('active');
+        }
+        
+        // Delete Button Logic
+        const delBtn = document.getElementById('btn-obj-delete');
+        delBtn.innerText = `Delete ${isFolder ? 'Folder' : 'Asset'}`;
+        delBtn.disabled = !canDelete;
+        if (!canDelete) delBtn.title = 'Only empty folders can be deleted';
+        else delBtn.title = '';
+    },
+    
+    updateObjProp: function (key, val, isContinuous = false) {
+        if (window.Editor.selectedIds.length !== 1) return;
+        const id = window.Editor.selectedIds[0];
+        const obj = window.Editor.data.objects.find(o => o.id === id);
+        if (!obj) return;
+        
+        if (!isContinuous) window.History.saveState();
+        
+        const oldW = obj.width;
+        const oldH = obj.height;
+        obj[key] = val;
+        
+        // Aspect Ratio Logic
+        if (window.Editor.aspectLocked && obj.type !== 'folder') {
+            const ratio = oldW / oldH;
+            if (key === 'width' && ratio !== 0) obj.height = val / ratio;
+            if (key === 'height') obj.width = val * ratio;
+        }
+        
+        if (key === 'name' || key === 'zIndex') window.Treeview.render();
+        
+        // If continuous (slider), don't re-render entire panel to avoid focus loss
+        // But we might need to update linked inputs (e.g. slider -> number input)
+        if (isContinuous) {
+            if (key === 'opacity') {
+                document.getElementById('inp-obj-opacity').value = val;
+            }
+            window.Editor.render(); // Redraw canvas
+        } else {
+            this.update(); // Full UI refresh
+            window.Editor.render();
+        }
+    },
+    
+    updateObjPropPct: function (key, pctVal) {
+        if (window.Editor.selectedIds.length !== 1) return;
+        const id = window.Editor.selectedIds[0];
+        const sceneW = window.Editor.data.meta.width;
+        const sceneH = window.Editor.data.meta.height;
+        let pxVal = 0;
+        
+        if (key === 'width') pxVal = (pctVal / 100) * sceneW;
+        if (key === 'height') pxVal = (pctVal / 100) * sceneH;
+        
+        this.updateObjProp(key, pxVal);
+    },
+    
+    fitObject: function () {
+        if (window.Editor.selectedIds.length === 1) {
+            window.Editor.fitObjectToScene(window.Editor.selectedIds[0]);
         }
     },
     
     toggleAspect: function () {
         window.Editor.aspectLocked = !window.Editor.aspectLocked;
         this.update();
+    },
+    
+    // --- Multi Selection Logic ---
+    
+    updateMultiView: function (ids) {
+        document.getElementById('lbl-multi-count').innerText = ids.length;
     }
 };
 

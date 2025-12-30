@@ -27,13 +27,15 @@ window.Editor = {
 		'4K Desktop': { w: 3840, h: 2160 }
 	},
 	
-	// Getter for backward compatibility and single-item logic
+	// Updated: Returns null if nothing selected, 'scene' if scene selected, or first ID
 	get selectedId () {
-		return this.selectedIds.length > 0 ? this.selectedIds[0] : 'scene';
+		if (this.selectedIds.length === 0) return null;
+		return this.selectedIds[0];
 	},
 	
+	// Updated: Allows setting 'scene' explicitly, or [] for nothing
 	set selectedId (val) {
-		if (val === 'scene' || !val) this.selectedIds = [];
+		if (val === null || val === undefined) this.selectedIds = [];
 		else this.selectedIds = [val];
 	},
 	
@@ -45,7 +47,6 @@ window.Editor = {
 		// Toolbar Actions
 		document.getElementById('btn-play').onclick = () => { this.isPlaying = true; };
 		document.getElementById('btn-pause').onclick = () => { this.isPlaying = false; };
-		// Updated: Delegate to Interaction
 		document.getElementById('btn-duplicate').onclick = () => window.Interaction.duplicateSelected();
 		
 		// History Actions
@@ -162,7 +163,7 @@ window.Editor = {
 		
 		this.images = {};
 		this.animState = {};
-		this.selectedIds = [];
+		this.selectedIds = []; // Reset to nothing selected
 		
 		window.History.undoStack = [];
 		window.History.redoStack = [];
@@ -222,7 +223,7 @@ window.Editor = {
 		
 		let parentId = null;
 		// If single selection is a folder, add to it
-		if (this.selectedIds.length === 1) {
+		if (this.selectedIds.length === 1 && this.selectedIds[0] !== 'scene') {
 			const selected = this.data.objects.find(o => o.id === this.selectedIds[0]);
 			if (selected) {
 				parentId = (selected.type === 'folder') ? selected.id : selected.parentId;

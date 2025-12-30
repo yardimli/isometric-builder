@@ -20,8 +20,8 @@ window.Treeview = {
         const rootWrapper = document.createElement('div');
         rootWrapper.className = 'tree-node-wrapper' + (this.collapsedNodes.has('scene') ? ' collapsed' : '');
         
-        // Scene is a special case, usually single select only
-        const isSceneSelected = window.Editor.selectedIds.length === 0; // Or specific scene ID if implemented
+        // Check if scene is explicitly selected
+        const isSceneSelected = window.Editor.selectedIds.length === 1 && window.Editor.selectedIds[0] === 'scene';
         const rootItem = this.createItemElement({ id: 'scene', name: window.Editor.data.meta.sceneName, type: 'scene' }, isSceneSelected);
         rootWrapper.appendChild(rootItem);
         
@@ -79,7 +79,8 @@ window.Treeview = {
         
         el.onclick = (e) => {
             if (obj.id === 'scene') {
-                window.Editor.selectedIds = [];
+                // Explicitly select scene
+                window.Editor.selectedIds = ['scene'];
             } else {
                 const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
                 
@@ -200,7 +201,7 @@ window.Treeview = {
         
         let parentId = null;
         // If single selection, try to nest
-        if (window.Editor.selectedIds.length === 1) {
+        if (window.Editor.selectedIds.length === 1 && window.Editor.selectedIds[0] !== 'scene') {
             const selected = window.Editor.data.objects.find(o => o.id === window.Editor.selectedIds[0]);
             if (selected) {
                 parentId = (selected.type === 'folder') ? selected.id : selected.parentId;
