@@ -15,6 +15,7 @@ window.Editor = {
 	animState: {},
 	zoom: 1.0,
 	aspectLocked: true,
+	isDirty: false, // Tracks if scene has been modified
 	HANDLE_SIZE: 10,
 	
 	resolutions: {
@@ -46,6 +47,18 @@ window.Editor = {
 		document.getElementById('btn-play').onclick = () => { this.isPlaying = true; };
 		document.getElementById('btn-pause').onclick = () => { this.isPlaying = false; };
 		document.getElementById('btn-duplicate').onclick = () => window.Interaction.duplicateSelected();
+		
+		// Default Size Button (1024x1024)
+		document.getElementById('btn-default-size').onclick = () => {
+			if (!this.data) return;
+			window.History.saveState();
+			this.data.meta.width = 1024;
+			this.data.meta.height = 1024;
+			this.canvas.width = 1024;
+			this.canvas.height = 1024;
+			this.fitZoomToScreen();
+			window.PropertiesPanel.update();
+		};
 		
 		// History Actions
 		document.getElementById('btn-undo').onclick = () => window.History.undo();
@@ -94,6 +107,16 @@ window.Editor = {
 		});
 		
 		requestAnimationFrame((t) => this.gameLoop(t));
+	},
+	
+	// --- UI Helpers ---
+	
+	updateTitle: function () {
+		if (!this.data) return;
+		const el = document.getElementById('scene-name');
+		let name = this.data.meta.sceneName;
+		if (this.isDirty) name += '*';
+		el.innerText = name;
 	},
 	
 	// --- Custom Dialog API ---
@@ -171,6 +194,10 @@ window.Editor = {
 		window.Treeview.render();
 		this.fitZoomToScreen();
 		this.loadAssets();
+		
+		// Reset dirty state on load
+		this.isDirty = false;
+		this.updateTitle();
 	},
 	
 	setZoom: function (val) {
@@ -316,8 +343,6 @@ window.Editor = {
 			}
 		}
 		
-		if (this.data.meta.grid.enabled) this.drawGrid();
-		
 		// Updated Sort Logic:
 		// 1. Z-Index (ascending)
 		// 2. Array Index (ascending) - This ensures Tree Order dictates drawing order for same Z-Index
@@ -354,6 +379,9 @@ window.Editor = {
 			}
 			this.ctx.restore();
 		});
+		
+		// Draw Grid LAST so it is visible above everything
+		if (this.data.meta.grid.enabled) this.drawGrid();
 	},
 	
 	drawSprite: function (obj) {
@@ -372,7 +400,7 @@ window.Editor = {
 	
 	drawGrid: function () {
 		const sz = this.data.meta.grid.size;
-		this.ctx.beginPath(); this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+		this.ctx.beginPath(); this.ctx.strokeStyle = 'rgba(255,255,255,0.4)'; // Increased opacity slightly for visibility over objects
 		for (let x = 0; x <= this.canvas.width; x += sz) { this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvas.height); }
 		for (let y = 0; y <= this.canvas.height; y += sz) { this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvas.width, y); }
 		this.ctx.stroke();

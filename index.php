@@ -15,6 +15,8 @@
 			<button id="btn-open-modal" type="button">📂 Open</button>
 			<button id="btn-save" type="button">💾 Save</button>
 			<button id="btn-save-as" type="button">💾 Save As...</button>
+			<!-- New Button: Default Size -->
+			<button id="btn-default-size" type="button" title="Set Scene to 1024x1024">📏 1024x1024</button>
 			<button id="btn-assets-modal" type="button">🖼️ Assets</button>
 			<span class="separator">|</span>
 			<button id="btn-duplicate" type="button" title="Duplicate Selected (Ctrl+D)">📄 Duplicate</button>
@@ -22,6 +24,7 @@
 			<button id="btn-undo" type="button" title="Undo (Ctrl+Z)" disabled>↩️</button>
 			<button id="btn-redo" type="button" title="Redo (Ctrl+Y)" disabled>↪️</button>
 		</div>
+		<!-- Scene Name with potential asterisk -->
 		<span>Scene: <strong id="scene-name">Unsaved</strong></span>
 		<div class="controls">
 			<button id="btn-play" type="button">▶ Play</button>

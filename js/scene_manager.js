@@ -6,30 +6,30 @@ const SceneManager = {
 	currentScenePath: null,
 	browserMode: 'open',
 	browserPath: '',
-
+	
 	init: function () {
 		document.getElementById('btn-open-modal').onclick = () => this.openFileBrowser('open');
-		// Primary Save button: bypass overwrite check
-		document.getElementById('btn-save').onclick = () => this.saveScene(null, true);
+		// Primary Save button: bypass overwrite check, silent mode enabled
+		document.getElementById('btn-save').onclick = () => this.saveScene(null, true, true);
 		document.getElementById('btn-save-as').onclick = () => this.openFileBrowser('save');
-
+		
 		document.getElementById('btn-create-folder').onclick = () => this.createFolder();
 		document.getElementById('btn-browser-confirm').onclick = () => {
 			const name = document.getElementById('inp-browser-filename').value;
 			if (name) {
 				const fullPath = this.browserPath ? (this.browserPath + '/' + name) : name;
-				this.saveScene(fullPath, false); // Save As: check overwrite
+				this.saveScene(fullPath, false, false); // Save As: check overwrite, not silent
 			}
 		};
-
+		
 		this.loadScene('forest_level_1.json');
 	},
-
+	
 	loadScene: function (filename) {
 		const formData = new FormData();
 		formData.append('action', 'load_scene');
 		formData.append('filename', filename);
-
+		
 		fetch('php/file_manager.php', { method: 'POST', body: formData })
 			.then(r => r.json())
 			.then(res => {
@@ -47,11 +47,11 @@ const SceneManager = {
 				}
 			});
 	},
-
-	saveScene: async function (filename, overwrite = false) {
+	
+	saveScene: async function (filename, overwrite = false, silent = false) {
 		const data = window.Editor ? window.Editor.data : null;
 		if (!data) return;
-
+		
 		if (!filename) {
 			if (this.currentScenePath) {
 				filename = this.currentScenePath;
@@ -60,28 +60,34 @@ const SceneManager = {
 				return;
 			}
 		}
-
+		
 		const baseName = filename.split('/').pop().replace('.json', '');
 		data.meta.sceneName = baseName;
-
+		
 		const performSave = () => {
 			const formData = new FormData();
 			formData.append('action', 'save_scene');
 			formData.append('filename', filename);
 			formData.append('data', JSON.stringify(data, null, 2));
-
+			
 			fetch('php/file_manager.php', { method: 'POST', body: formData })
 				.then(r => r.json())
 				.then(res => {
-					window.Editor.alert(res.message);
+					if (!silent) {
+						window.Editor.alert(res.message);
+					}
 					if (res.success) {
 						this.currentScenePath = filename;
-						document.getElementById('scene-name').innerText = data.meta.sceneName;
+						// Mark as clean (not dirty)
+						if (window.Editor) {
+							window.Editor.isDirty = false;
+							window.Editor.updateTitle();
+						}
 						document.getElementById('modal-file-browser').style.display = 'none';
 					}
 				});
 		};
-
+		
 		if (overwrite) {
 			performSave();
 		} else {
@@ -103,7 +109,7 @@ const SceneManager = {
 				});
 		}
 	},
-
+	
 	createEmptyScene: function () {
 		const emptyData = {
 			meta: {
@@ -123,16 +129,16 @@ const SceneManager = {
 			window.Editor.loadSceneData(emptyData);
 		}
 	},
-
+	
 	openFileBrowser: function (mode) {
 		this.browserMode = mode;
 		const modal = document.getElementById('modal-file-browser');
 		const title = document.getElementById('browser-title');
 		const saveArea = document.getElementById('save-input-area');
-
+		
 		modal.style.display = 'block';
 		this.browserPath = '';
-
+		
 		if (mode === 'save') {
 			title.innerText = 'Save Scene As...';
 			saveArea.style.display = 'block';
@@ -142,15 +148,15 @@ const SceneManager = {
 			title.innerText = 'Open Scene';
 			saveArea.style.display = 'none';
 		}
-
+		
 		this.refreshBrowserList();
 	},
-
+	
 	refreshBrowserList: function () {
 		const formData = new FormData();
 		formData.append('action', 'list_scenes');
 		formData.append('path', this.browserPath);
-
+		
 		fetch('php/file_manager.php', { method: 'POST', body: formData })
 			.then(r => r.json())
 			.then(res => {
@@ -159,16 +165,16 @@ const SceneManager = {
 				}
 			});
 	},
-
+	
 	renderBrowserList: function (data) {
 		const list = document.getElementById('browser-list');
 		const pathLabel = document.getElementById('browser-current-path');
 		const btnUp = document.getElementById('btn-browser-up');
-
+		
 		list.innerHTML = '';
 		this.browserPath = data.currentPath;
 		pathLabel.innerText = (this.browserPath || 'Root') + '/';
-
+		
 		if (typeof data.parent === 'string') {
 			btnUp.disabled = false;
 			btnUp.onclick = () => {
@@ -178,7 +184,7 @@ const SceneManager = {
 		} else {
 			btnUp.disabled = true;
 		}
-
+		
 		data.folders.forEach(folder => {
 			const li = document.createElement('li');
 			li.innerHTML = `<span class="icon">📁</span> ${folder}`;
@@ -188,7 +194,7 @@ const SceneManager = {
 			};
 			list.appendChild(li);
 		});
-
+		
 		data.files.forEach(file => {
 			const li = document.createElement('li');
 			li.innerHTML = `<span class="icon">📄</span> ${file}`;
@@ -204,7 +210,7 @@ const SceneManager = {
 			list.appendChild(li);
 		});
 	},
-
+	
 	createFolder: async function () {
 		// Use custom prompt
 		const name = await window.Editor.prompt('Enter folder name:');
