@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Game Editor Engine v1.7</title>
+	<title>Game Editor Engine v1.8</title>
 	<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -121,28 +121,48 @@
 				
 				<!-- Sprite Animation Settings -->
 				<div id="grp-obj-sprite" style="display:none; border-top:1px solid #444; margin-top:10px; padding-top:10px;">
-					<div class="prop-row">
-						<label for="sel-obj-anim">Animation</label>
-						<select id="sel-obj-anim" onchange="PropertiesPanel.updateObjProp('currentAnim', this.value)"></select>
-					</div>
-					<div class="prop-row">
-						<label for="inp-obj-fps">FPS</label>
-						<input type="number" id="inp-obj-fps" min="1" max="60" onchange="PropertiesPanel.updateSpriteSetting('fps', Number(this.value))">
-					</div>
-					<!-- New Inputs for Animation Offsets -->
-					<div class="prop-row-dual">
-						<div>
-							<label for="inp-obj-step-x">Step X</label>
-							<input type="number" id="inp-obj-step-x" onchange="PropertiesPanel.updateSpriteSetting('stepX', Number(this.value))">
+					
+					<!-- Animation Settings Configuration -->
+					<div id="sub-grp-single">
+						<div class="prop-row">
+							<label for="sel-obj-anim">Edit Settings For:</label>
+							<select id="sel-obj-anim" onchange="PropertiesPanel.updateObjProp('currentAnim', this.value)"></select>
 						</div>
-						<div>
-							<label for="inp-obj-step-y">Step Y</label>
-							<input type="number" id="inp-obj-step-y" onchange="PropertiesPanel.updateSpriteSetting('stepY', Number(this.value))">
+						<div class="prop-row">
+							<label for="inp-obj-fps">FPS</label>
+							<input type="number" id="inp-obj-fps" min="1" max="60" onchange="PropertiesPanel.updateSpriteSetting('fps', Number(this.value))">
+						</div>
+						<!-- New Inputs for Animation Offsets -->
+						<div class="prop-row-dual">
+							<div>
+								<label for="inp-obj-step-x">Step X</label>
+								<input type="number" id="inp-obj-step-x" onchange="PropertiesPanel.updateSpriteSetting('stepX', Number(this.value))">
+							</div>
+							<div>
+								<label for="inp-obj-step-y">Step Y</label>
+								<input type="number" id="inp-obj-step-y" onchange="PropertiesPanel.updateSpriteSetting('stepY', Number(this.value))">
+							</div>
 						</div>
 					</div>
-					<div class="prop-row">
-						<label for="inp-obj-reset-limit" title="Reset offsets after this many steps (0 = sync with animation)">Reset Limit</label>
-						<input type="number" id="inp-obj-reset-limit" min="0" onchange="PropertiesPanel.updateSpriteSetting('resetLimit', Number(this.value))">
+					
+					<!-- Sequencer Mode -->
+					<div id="grp-obj-sequencer" style="display:none; margin-top:10px;">
+						<label style="color:#ccc; font-size:12px;">Sequence Steps:</label>
+						<div id="seq-list" style="max-height:150px; overflow-y:auto; border:1px solid #444; padding:5px; margin-bottom:10px;">
+							<!-- Sequence items populated by JS -->
+						</div>
+						<div class="prop-row-dual">
+							<div style="flex:2;">
+								<select id="sel-seq-anim" style="width:100%;"></select>
+							</div>
+							<div style="flex:1;">
+								<input type="number" id="inp-seq-limit" placeholder="Steps" style="width:100%;" title="0 = Infinite Loop">
+							</div>
+						</div>
+						<button class="primary-btn" style="width:100%; margin-top:5px;" onclick="PropertiesPanel.addSequenceStep()">+ Add Step</button>
+						<p class="hint-text" style="font-size:10px; margin-top:5px;">
+							* Step X/Y values are taken from the animation's individual settings.
+						</p>
 					</div>
 				</div>
 				
@@ -316,6 +336,7 @@
 <script src="js/assets.js"></script>
 <script src="js/sprite_browser.js"></script>
 <script src="js/history.js"></script>
+<script src="js/sprite_animator.js"></script> <!-- New Script -->
 <script src="js/properties.js"></script>
 <script src="js/treeview.js"></script>
 <script src="js/scene_manager.js"></script>

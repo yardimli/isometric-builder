@@ -9,11 +9,11 @@ window.Editor = {
 	wrapper: null,
 	data: null,
 	images: {},
-	spriteData: {}, // Cache for sprite animation frames
+	// spriteData removed, delegated to SpriteAnimator
 	isPlaying: false,
 	selectedIds: [],
 	lastTime: 0,
-	animState: {},
+	// animState removed, delegated to SpriteAnimator
 	zoom: 1.0,
 	aspectLocked: true,
 	isDirty: false,
@@ -30,260 +30,234 @@ window.Editor = {
 	},
 	
 	get selectedId () {
-		if (this.selectedIds.length === 0) return null
-		return this.selectedIds[0]
+		if (this.selectedIds.length === 0) return null;
+		return this.selectedIds[0];
 	},
 	
 	set selectedId (val) {
-		if (val === null || val === undefined) this.selectedIds = []
-		else this.selectedIds = [val]
+		if (val === null || val === undefined) this.selectedIds = [];
+		else this.selectedIds = [val];
 	},
 	
 	init: function () {
-		this.canvas = document.getElementById('gameCanvas')
-		this.ctx = this.canvas.getContext('2d')
-		this.wrapper = document.getElementById('canvas-wrapper')
+		this.canvas = document.getElementById('gameCanvas');
+		this.ctx = this.canvas.getContext('2d');
+		this.wrapper = document.getElementById('canvas-wrapper');
+		
+		// Initialize Animator
+		if (window.SpriteAnimator) window.SpriteAnimator.init();
 		
 		// Toolbar Actions
-		document.getElementById('btn-play').onclick = () => { this.isPlaying = true }
-		document.getElementById('btn-pause').onclick = () => { this.isPlaying = false }
-		document.getElementById('btn-duplicate').onclick = () => window.Interaction.duplicateSelected()
+		document.getElementById('btn-play').onclick = () => { this.isPlaying = true; };
+		document.getElementById('btn-pause').onclick = () => { this.isPlaying = false; };
+		document.getElementById('btn-duplicate').onclick = () => window.Interaction.duplicateSelected();
 		
 		// History Actions
-		document.getElementById('btn-undo').onclick = () => window.History.undo()
-		document.getElementById('btn-redo').onclick = () => window.History.redo()
+		document.getElementById('btn-undo').onclick = () => window.History.undo();
+		document.getElementById('btn-redo').onclick = () => window.History.redo();
 		
 		// Grid Controls
 		document.getElementById('chk-grid-visible').onchange = (e) => {
-			if (this.data) this.data.meta.grid.enabled = e.target.checked
-		}
+			if (this.data) this.data.meta.grid.enabled = e.target.checked;
+		};
 		document.getElementById('chk-grid-snap').onchange = (e) => {
-			if (this.data) this.data.meta.grid.snap = e.target.checked
-		}
+			if (this.data) this.data.meta.grid.snap = e.target.checked;
+		};
 		
 		// Zoom Controls
-		document.getElementById('btn-zoom-in').onclick = () => this.setZoom(this.zoom + 0.1)
-		document.getElementById('btn-zoom-out').onclick = () => this.setZoom(this.zoom - 0.1)
+		document.getElementById('btn-zoom-in').onclick = () => this.setZoom(this.zoom + 0.1);
+		document.getElementById('btn-zoom-out').onclick = () => this.setZoom(this.zoom - 0.1);
 		document.getElementById('inp-zoom-percent').onchange = (e) => {
-			const val = parseFloat(e.target.value)
-			if (!isNaN(val)) this.setZoom(val / 100)
-		}
+			const val = parseFloat(e.target.value);
+			if (!isNaN(val)) this.setZoom(val / 100);
+		};
 		
 		document.getElementById('btn-assets-modal').onclick = () => {
-			document.getElementById('modal-assets').style.display = 'block'
-		}
+			document.getElementById('modal-assets').style.display = 'block';
+		};
 		
 		// Keyboard Shortcuts
 		window.addEventListener('keydown', (e) => {
 			if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-				e.preventDefault()
-				window.Interaction.duplicateSelected()
+				e.preventDefault();
+				window.Interaction.duplicateSelected();
 			}
 			if (e.key === 'Delete') {
 				if (this.selectedIds.length > 0) {
-					this.deleteSelected()
+					this.deleteSelected();
 				}
 			}
-		})
+		});
 		
 		// Modal Close Logic
 		document.querySelectorAll('.close').forEach(span => {
 			span.onclick = function () {
-				this.closest('.modal').style.display = 'none'
-			}
-		})
+				this.closest('.modal').style.display = 'none';
+			};
+		});
 		
-		requestAnimationFrame((t) => this.gameLoop(t))
+		requestAnimationFrame((t) => this.gameLoop(t));
 	},
 	
 	// --- UI Helpers ---
 	
 	updateTitle: function () {
-		if (!this.data) return
-		const el = document.getElementById('scene-name')
-		let name = this.data.meta.sceneName
-		if (this.isDirty) name += '*'
-		el.innerText = name
+		if (!this.data) return;
+		const el = document.getElementById('scene-name');
+		let name = this.data.meta.sceneName;
+		if (this.isDirty) name += '*';
+		el.innerText = name;
 	},
 	
 	// --- Custom Dialog API ---
 	
 	alert: function (msg) {
 		return new Promise((resolve) => {
-			const dlg = document.getElementById('dlg-alert')
-			document.getElementById('dlg-alert-msg').innerText = msg
+			const dlg = document.getElementById('dlg-alert');
+			document.getElementById('dlg-alert-msg').innerText = msg;
 			document.getElementById('dlg-alert-close').onclick = () => {
-				dlg.close()
-				resolve()
-			}
-			dlg.showModal()
-		})
+				dlg.close();
+				resolve();
+			};
+			dlg.showModal();
+		});
 	},
 	
 	confirm: function (msg) {
 		return new Promise((resolve) => {
-			const dlg = document.getElementById('dlg-confirm')
-			document.getElementById('dlg-confirm-msg').innerText = msg
+			const dlg = document.getElementById('dlg-confirm');
+			document.getElementById('dlg-confirm-msg').innerText = msg;
 			document.getElementById('dlg-confirm-yes').onclick = () => {
-				dlg.close()
-				resolve(true)
-			}
+				dlg.close();
+				resolve(true);
+			};
 			document.getElementById('dlg-confirm-no').onclick = () => {
-				dlg.close()
-				resolve(false)
-			}
-			dlg.showModal()
-		})
+				dlg.close();
+				resolve(false);
+			};
+			dlg.showModal();
+		});
 	},
 	
 	prompt: function (msg, defaultVal = '') {
 		return new Promise((resolve) => {
-			const dlg = document.getElementById('dlg-prompt')
-			const input = document.getElementById('dlg-prompt-input')
-			document.getElementById('dlg-prompt-msg').innerText = msg
-			input.value = defaultVal
+			const dlg = document.getElementById('dlg-prompt');
+			const input = document.getElementById('dlg-prompt-input');
+			document.getElementById('dlg-prompt-msg').innerText = msg;
+			input.value = defaultVal;
 			document.getElementById('dlg-prompt-ok').onclick = () => {
-				const val = input.value
-				dlg.close()
-				resolve(val)
-			}
+				const val = input.value;
+				dlg.close();
+				resolve(val);
+			};
 			document.getElementById('dlg-prompt-cancel').onclick = () => {
-				dlg.close()
-				resolve(null)
-			}
-			dlg.showModal()
-		})
+				dlg.close();
+				resolve(null);
+			};
+			dlg.showModal();
+		});
 	},
 	
 	// --- Scene Logic ---
 	
 	loadSceneData: function (newData) {
-		this.data = newData
+		this.data = newData;
 		this.data.objects.forEach(obj => {
-			if (obj.parentId === undefined) obj.parentId = null
-			if (obj.type === 'sprite-anim' && !obj.animSettings) {
-				obj.animSettings = {}
+			if (obj.parentId === undefined) obj.parentId = null;
+			if (obj.type === 'sprite-anim') {
+				if (!obj.animSettings) obj.animSettings = {};
+				// Ensure sequence array exists
+				if (!obj.sequence) obj.sequence = [];
 			}
-		})
+		});
 		
-		document.getElementById('chk-grid-visible').checked = this.data.meta.grid.enabled
-		document.getElementById('chk-grid-snap').checked = this.data.meta.grid.snap
+		document.getElementById('chk-grid-visible').checked = this.data.meta.grid.enabled;
+		document.getElementById('chk-grid-snap').checked = this.data.meta.grid.snap;
 		
-		this.canvas.width = this.data.meta.width
-		this.canvas.height = this.data.meta.height
+		this.canvas.width = this.data.meta.width;
+		this.canvas.height = this.data.meta.height;
 		
-		this.images = {}
-		this.spriteData = {}
-		this.animState = {}
-		this.selectedIds = []
+		this.images = {};
+		if (window.SpriteAnimator) window.SpriteAnimator.init();
+		this.selectedIds = [];
 		
-		window.History.undoStack = []
-		window.History.redoStack = []
-		window.History.updateButtons()
+		window.History.undoStack = [];
+		window.History.redoStack = [];
+		window.History.updateButtons();
 		
-		window.PropertiesPanel.update()
-		window.Treeview.render()
-		this.fitZoomToScreen()
-		this.loadAssets()
+		window.PropertiesPanel.update();
+		window.Treeview.render();
+		this.fitZoomToScreen();
+		this.loadAssets();
 		
-		this.isDirty = false
-		this.updateTitle()
+		this.isDirty = false;
+		this.updateTitle();
 	},
 	
 	setZoom: function (val) {
-		this.zoom = Math.max(0.1, Math.min(5.0, val))
-		this.canvas.style.width = (this.data.meta.width * this.zoom) + 'px'
-		this.canvas.style.height = (this.data.meta.height * this.zoom) + 'px'
-		document.getElementById('inp-zoom-percent').value = Math.round(this.zoom * 100) + '%'
+		this.zoom = Math.max(0.1, Math.min(5.0, val));
+		this.canvas.style.width = (this.data.meta.width * this.zoom) + 'px';
+		this.canvas.style.height = (this.data.meta.height * this.zoom) + 'px';
+		document.getElementById('inp-zoom-percent').value = Math.round(this.zoom * 100) + '%';
 	},
 	
 	fitZoomToScreen: function () {
-		if (!this.wrapper || !this.data) return
-		const availW = this.wrapper.clientWidth - 40
-		const availH = this.wrapper.clientHeight - 40
-		const scaleW = availW / this.data.meta.width
-		const scaleH = availH / this.data.meta.height
-		let newZoom = Math.min(scaleW, scaleH)
-		if (newZoom > 1) newZoom = 1
-		this.setZoom(newZoom)
+		if (!this.wrapper || !this.data) return;
+		const availW = this.wrapper.clientWidth - 40;
+		const availH = this.wrapper.clientHeight - 40;
+		const scaleW = availW / this.data.meta.width;
+		const scaleH = availH / this.data.meta.height;
+		let newZoom = Math.min(scaleW, scaleH);
+		if (newZoom > 1) newZoom = 1;
+		this.setZoom(newZoom);
 	},
 	
 	loadAssets: function () {
-		const promises = []
-		if (this.data.meta.backgroundImage) promises.push(this.loadImage('bg', this.data.meta.backgroundImage))
+		const promises = [];
+		if (this.data.meta.backgroundImage) promises.push(this.loadImage('bg', this.data.meta.backgroundImage));
 		
 		this.data.objects.forEach(obj => {
 			if (obj.type === 'static' && obj.asset) {
-				promises.push(this.loadImage(obj.asset, obj.asset))
-			} else if (obj.type === 'sprite-anim') {
-				promises.push(this.loadSpriteData(obj.spriteName))
+				promises.push(this.loadImage(obj.asset, obj.asset));
+			} else if (obj.type === 'sprite-anim' && window.SpriteAnimator) {
+				promises.push(window.SpriteAnimator.loadSpriteData(obj.spriteName));
 			}
-		})
+		});
 		
-		const library = this.data.library.sprites
+		const library = this.data.library.sprites;
 		for (const key in library) {
-			if (library[key].sourceFile) promises.push(this.loadImage(library[key].sourceFile, library[key].sourceFile))
+			if (library[key].sourceFile) promises.push(this.loadImage(library[key].sourceFile, library[key].sourceFile));
 		}
-		return Promise.all(promises)
+		return Promise.all(promises);
 	},
 	
 	loadImage: function (key, src) {
 		return new Promise((resolve) => {
-			if (this.images[key]) return resolve()
-			const img = new Image()
-			img.src = src
-			img.onload = () => { this.images[key] = img; resolve() }
-			img.onerror = () => { console.warn(`Missing: ${src}`); this.images[key] = null; resolve() }
-		})
-	},
-	
-	loadSpriteData: function (spriteName) {
-		return new Promise((resolve) => {
-			if (this.spriteData[spriteName]) return resolve()
-			
-			const formData = new FormData()
-			formData.append('action', 'get_sprite_details')
-			formData.append('name', spriteName)
-			
-			fetch('php/file_manager.php', { method: 'POST', body: formData })
-				.then(r => r.json())
-				.then(res => {
-					if (res.success) {
-						this.spriteData[spriteName] = res.data
-						const imgPromises = []
-						for (const anim in res.data) {
-							const frames = res.data[anim]
-							frames.forEach(frame => {
-								const path = `assets/sprite-animation/${spriteName}/${anim}/${frame}`
-								imgPromises.push(this.loadImage(path, path))
-							})
-						}
-						Promise.all(imgPromises).then(resolve)
-					} else {
-						resolve()
-					}
-				})
-				.catch(() => resolve())
-		})
+			if (this.images[key]) return resolve();
+			const img = new Image();
+			img.src = src;
+			img.onload = () => { this.images[key] = img; resolve(); };
+			img.onerror = () => { console.warn(`Missing: ${src}`); this.images[key] = null; resolve(); };
+		});
 	},
 	
 	addAssetToScene: function (assetPath) {
-		if (!this.data) return
-		window.History.saveState()
-		let parentId = null
+		if (!this.data) return;
+		window.History.saveState();
+		let parentId = null;
 		if (this.selectedIds.length === 1 && this.selectedIds[0] !== 'scene') {
-			const selected = this.data.objects.find(o => o.id === this.selectedIds[0])
+			const selected = this.data.objects.find(o => o.id === this.selectedIds[0]);
 			if (selected) {
-				parentId = (selected.type === 'folder') ? selected.id : selected.parentId
+				parentId = (selected.type === 'folder') ? selected.id : selected.parentId;
 			}
 		}
 		
-		const fileName = assetPath.split('/').pop().replace(/\.[^/.]+$/, '')
-		let uniqueName = fileName
-		let suffix = 1
+		const fileName = assetPath.split('/').pop().replace(/\.[^/.]+$/, '');
+		let uniqueName = fileName;
+		let suffix = 1;
 		while (this.data.objects.some(o => o.name === uniqueName)) {
-			uniqueName = `${fileName}_${suffix}`
-			suffix++
+			uniqueName = `${fileName}_${suffix}`;
+			suffix++;
 		}
 		
 		const newObj = {
@@ -300,39 +274,39 @@ window.Editor = {
 			zIndex: 0,
 			visible: true,
 			locked: false
-		}
+		};
 		
 		this.loadImage(assetPath, assetPath).then(() => {
-			const img = this.images[assetPath]
+			const img = this.images[assetPath];
 			if (img) {
-				newObj.width = img.width
-				newObj.height = img.height
+				newObj.width = img.width;
+				newObj.height = img.height;
 			}
-			this.data.objects.push(newObj)
-			this.selectedIds = [newObj.id]
-			window.PropertiesPanel.update()
-			window.Treeview.render()
-			document.getElementById('modal-assets').style.display = 'none'
-		})
+			this.data.objects.push(newObj);
+			this.selectedIds = [newObj.id];
+			window.PropertiesPanel.update();
+			window.Treeview.render();
+			document.getElementById('modal-assets').style.display = 'none';
+		});
 	},
 	
 	addSpriteToScene: function (spriteName) {
-		if (!this.data) return
-		window.History.saveState()
+		if (!this.data) return;
+		window.History.saveState();
 		
-		let parentId = null
+		let parentId = null;
 		if (this.selectedIds.length === 1 && this.selectedIds[0] !== 'scene') {
-			const selected = this.data.objects.find(o => o.id === this.selectedIds[0])
+			const selected = this.data.objects.find(o => o.id === this.selectedIds[0]);
 			if (selected) {
-				parentId = (selected.type === 'folder') ? selected.id : selected.parentId
+				parentId = (selected.type === 'folder') ? selected.id : selected.parentId;
 			}
 		}
 		
-		let uniqueName = spriteName
-		let suffix = 1
+		let uniqueName = spriteName;
+		let suffix = 1;
 		while (this.data.objects.some(o => o.name === uniqueName)) {
-			uniqueName = `${spriteName}_${suffix}`
-			suffix++
+			uniqueName = `${spriteName}_${suffix}`;
+			suffix++;
 		}
 		
 		const newObj = {
@@ -342,6 +316,7 @@ window.Editor = {
 			spriteName: spriteName,
 			currentAnim: '',
 			animSettings: {},
+			sequence: [], // New sequence array
 			parentId: parentId,
 			x: this.canvas.width / 2 - 32,
 			y: this.canvas.height / 2 - 32,
@@ -351,285 +326,199 @@ window.Editor = {
 			zIndex: 0,
 			visible: true,
 			locked: false
-		}
+		};
 		
-		this.loadSpriteData(spriteName).then(() => {
-			const anims = this.spriteData[spriteName]
-			if (anims) {
-				const animKeys = Object.keys(anims)
-				if (animKeys.length > 0) {
-					newObj.currentAnim = animKeys[0]
-					newObj.animSettings[newObj.currentAnim] = { fps: 10, stepX: 0, stepY: 0, resetLimit: 0 }
-					
-					const firstFrame = anims[newObj.currentAnim][0]
-					const path = `assets/sprite-animation/${spriteName}/${newObj.currentAnim}/${firstFrame}`
-					const img = this.images[path]
-					if (img) {
-						newObj.width = img.width
-						newObj.height = img.height
+		if (window.SpriteAnimator) {
+			window.SpriteAnimator.loadSpriteData(spriteName).then(() => {
+				const anims = window.SpriteAnimator.spriteData[spriteName];
+				if (anims) {
+					const animKeys = Object.keys(anims);
+					if (animKeys.length > 0) {
+						newObj.currentAnim = animKeys[0];
+						newObj.animSettings[newObj.currentAnim] = { fps: 10, stepX: 0, stepY: 0, resetLimit: 0 };
+						
+						// Add default sequence step (infinite loop)
+						newObj.sequence.push({ anim: newObj.currentAnim, limit: 0 });
+						
+						const firstFrame = anims[newObj.currentAnim][0];
+						const path = `assets/sprite-animation/${spriteName}/${newObj.currentAnim}/${firstFrame}`;
+						const img = this.images[path];
+						if (img) {
+							newObj.width = img.width;
+							newObj.height = img.height;
+						}
 					}
 				}
-			}
-			
-			this.data.objects.push(newObj)
-			this.selectedIds = [newObj.id]
-			window.PropertiesPanel.update()
-			window.Treeview.render()
-		})
+				
+				this.data.objects.push(newObj);
+				this.selectedIds = [newObj.id];
+				window.PropertiesPanel.update();
+				window.Treeview.render();
+			});
+		}
 	},
 	
 	gameLoop: function (timestamp) {
 		if (!this.data) {
-			requestAnimationFrame((t) => this.gameLoop(t))
-			return
+			requestAnimationFrame((t) => this.gameLoop(t));
+			return;
 		}
-		const dt = (timestamp - this.lastTime) / 1000
-		this.lastTime = timestamp
-		if (this.isPlaying) this.updateAnimations(dt)
-		this.render()
-		requestAnimationFrame((t) => this.gameLoop(t))
-	},
-	
-	updateAnimations: function (dt) {
-		this.data.objects.forEach(obj => {
-			if (obj.type === 'sprite') {
-				// Legacy sprite logic
-				if (!this.animState[obj.id]) this.animState[obj.id] = { frameIndex: 0, timer: 0 }
-				const config = this.data.library.sprites[obj.spriteConfigId]
-				if (!config) return
-				const anim = config.animations[obj.currentAnimation]
-				if (!anim) return
-				const state = this.animState[obj.id]
-				state.timer += dt
-				if (state.timer >= (1 / anim.fps)) {
-					state.timer = 0
-					state.frameIndex++
-					if (state.frameIndex >= anim.frames.length) {
-						state.frameIndex = anim.loop ? 0 : anim.frames.length - 1
-					}
-				}
-			} else if (obj.type === 'sprite-anim') {
-				// New Sprite Animation Logic
-				if (!this.animState[obj.id]) this.animState[obj.id] = { frameIndex: 0, timer: 0 }
-				const data = this.spriteData[obj.spriteName]
-				if (!data || !data[obj.currentAnim]) return
-				
-				const settings = obj.animSettings[obj.currentAnim] || { fps: 10 }
-				const fps = settings.fps || 10
-				
-				const state = this.animState[obj.id]
-				state.timer += dt
-				if (state.timer >= (1 / fps)) {
-					state.timer = 0
-					state.frameIndex++
-					// Note: We do NOT reset frameIndex here. We let it grow indefinitely
-					// to support movement offsets that extend beyond the animation loop length.
-				}
-			}
-		})
+		const dt = (timestamp - this.lastTime) / 1000;
+		this.lastTime = timestamp;
+		
+		if (this.isPlaying && window.SpriteAnimator) {
+			window.SpriteAnimator.update(dt, this.data.objects);
+		}
+		this.render();
+		requestAnimationFrame((t) => this.gameLoop(t));
 	},
 	
 	render: function () {
-		this.ctx.fillStyle = this.data.meta.backgroundColor
-		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+		this.ctx.fillStyle = this.data.meta.backgroundColor;
+		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 		
 		if (this.data.meta.backgroundImage && this.images.bg) {
 			if (this.data.meta.backgroundMode === 'tile') {
-				const p = this.ctx.createPattern(this.images.bg, 'repeat')
-				this.ctx.fillStyle = p
-				this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+				const p = this.ctx.createPattern(this.images.bg, 'repeat');
+				this.ctx.fillStyle = p;
+				this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 			} else {
-				this.ctx.drawImage(this.images.bg, 0, 0, this.canvas.width, this.canvas.height)
+				this.ctx.drawImage(this.images.bg, 0, 0, this.canvas.width, this.canvas.height);
 			}
 		}
 		
-		const sorted = this.data.objects.map((obj, index) => ({ obj, index }))
+		const sorted = this.data.objects.map((obj, index) => ({ obj, index }));
 		sorted.sort((a, b) => {
 			if (a.obj.zIndex !== b.obj.zIndex) {
-				return a.obj.zIndex - b.obj.zIndex
+				return a.obj.zIndex - b.obj.zIndex;
 			}
-			return a.index - b.index
-		})
+			return a.index - b.index;
+		});
 		
 		sorted.forEach(item => {
-			const obj = item.obj
-			if (!obj.visible || obj.type === 'folder') return
-			this.ctx.save()
-			this.ctx.globalAlpha = obj.opacity
+			const obj = item.obj;
+			if (!obj.visible || obj.type === 'folder') return;
+			this.ctx.save();
+			this.ctx.globalAlpha = obj.opacity;
 			
 			if (obj.type === 'static') {
-				const img = this.images[obj.asset]
-				if (img) this.ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height)
-				else { this.ctx.fillStyle = '#666'; this.ctx.fillRect(obj.x, obj.y, obj.width, obj.height) }
-			} else if (obj.type === 'sprite') {
-				this.drawSprite(obj)
-			} else if (obj.type === 'sprite-anim') {
-				this.drawSpriteAnim(obj)
+				const img = this.images[obj.asset];
+				if (img) this.ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
+				else { this.ctx.fillStyle = '#666'; this.ctx.fillRect(obj.x, obj.y, obj.width, obj.height); }
+			} else if (obj.type === 'sprite-anim' && window.SpriteAnimator) {
+				window.SpriteAnimator.draw(this.ctx, obj);
 			}
 			
 			if (this.selectedIds.includes(obj.id)) {
-				this.ctx.strokeStyle = '#00FF00'; this.ctx.lineWidth = 2
-				this.ctx.strokeRect(obj.x, obj.y, obj.width, obj.height)
+				this.ctx.strokeStyle = '#00FF00'; this.ctx.lineWidth = 2;
+				this.ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
 				if (this.selectedIds.length === 1 && !obj.locked) {
-					this.drawResizeHandles(obj)
+					this.drawResizeHandles(obj);
 				}
 			}
-			this.ctx.restore()
-		})
+			this.ctx.restore();
+		});
 		
-		if (this.data.meta.grid.enabled) this.drawGrid()
-	},
-	
-	drawSprite: function (obj) {
-		const config = this.data.library.sprites[obj.spriteConfigId]
-		if (!config) return
-		const img = this.images[config.sourceFile]
-		if (!img) return
-		const anim = config.animations[obj.currentAnimation]
-		const state = this.animState[obj.id] || { frameIndex: 0 }
-		const frameId = anim.frames[state.frameIndex]
-		const cols = Math.floor(img.width / config.frameWidth)
-		const col = frameId % cols
-		const row = Math.floor(frameId / cols)
-		this.ctx.drawImage(img, col * config.frameWidth, row * config.frameHeight, config.frameWidth, config.frameHeight, obj.x, obj.y, obj.width, obj.height)
-	},
-	
-	drawSpriteAnim: function (obj) {
-		const data = this.spriteData[obj.spriteName]
-		if (!data || !data[obj.currentAnim]) return
-		
-		const frames = data[obj.currentAnim]
-		const state = this.animState[obj.id] || { frameIndex: 0 }
-		
-		// 1. Determine Image Frame (Loops with animation)
-		const frameIdx = state.frameIndex % frames.length
-		const frameFile = frames[frameIdx]
-		
-		const path = `assets/sprite-animation/${obj.spriteName}/${obj.currentAnim}/${frameFile}`
-		const img = this.images[path]
-		
-		// 2. Determine Position Offset
-		const settings = obj.animSettings[obj.currentAnim] || { stepX: 0, stepY: 0, resetLimit: 0 }
-		const stepX = settings.stepX || 0
-		const stepY = settings.stepY || 0
-		const resetLimit = settings.resetLimit || 0
-		
-		// If resetLimit is set (e.g. 100), we count 0 to 100 (101 steps) before reset.
-		// If resetLimit is 0, we sync with the animation loop length.
-		let mod = frames.length
-		if (resetLimit > 0) {
-			mod = resetLimit + 1
-		}
-		
-		const offsetMultiplier = state.frameIndex % mod
-		
-		const drawX = obj.x + (stepX * offsetMultiplier)
-		const drawY = obj.y + (stepY * offsetMultiplier)
-		
-		if (img) {
-			this.ctx.drawImage(img, drawX, drawY, obj.width, obj.height)
-		} else {
-			this.loadImage(path, path)
-		}
+		if (this.data.meta.grid.enabled) this.drawGrid();
 	},
 	
 	drawGrid: function () {
-		const sz = this.data.meta.grid.size
-		this.ctx.beginPath(); this.ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-		for (let x = 0; x <= this.canvas.width; x += sz) { this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvas.height) }
-		for (let y = 0; y <= this.canvas.height; y += sz) { this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvas.width, y) }
-		this.ctx.stroke()
+		const sz = this.data.meta.grid.size;
+		this.ctx.beginPath(); this.ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+		for (let x = 0; x <= this.canvas.width; x += sz) { this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvas.height); }
+		for (let y = 0; y <= this.canvas.height; y += sz) { this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvas.width, y); }
+		this.ctx.stroke();
 	},
 	
 	drawResizeHandles: function (obj) {
-		const handles = this.getHandleCoords(obj)
-		this.ctx.fillStyle = '#fff'
-		this.ctx.strokeStyle = '#000'
-		this.ctx.lineWidth = 1
+		const handles = this.getHandleCoords(obj);
+		this.ctx.fillStyle = '#fff';
+		this.ctx.strokeStyle = '#000';
+		this.ctx.lineWidth = 1;
 		for (const key in handles) {
-			const h = handles[key]
-			this.ctx.fillRect(h.x, h.y, h.w, h.h)
-			this.ctx.strokeRect(h.x, h.y, h.w, h.h)
+			const h = handles[key];
+			this.ctx.fillRect(h.x, h.y, h.w, h.h);
+			this.ctx.strokeRect(h.x, h.y, h.w, h.h);
 		}
 	},
 	
 	getHandleCoords: function (obj) {
-		const s = this.HANDLE_SIZE / this.zoom
+		const s = this.HANDLE_SIZE / this.zoom;
 		return {
 			tl: { x: obj.x - s / 2, y: obj.y - s / 2, w: s, h: s },
 			tr: { x: obj.x + obj.width - s / 2, y: obj.y - s / 2, w: s, h: s },
 			bl: { x: obj.x - s / 2, y: obj.y + obj.height - s / 2, w: s, h: s },
 			br: { x: obj.x + obj.width - s / 2, y: obj.y + obj.height - s / 2, w: s, h: s }
-		}
+		};
 	},
 	
 	fitObjectToScene: function (id) {
-		const obj = this.data.objects.find(o => o.id === id)
-		if (!obj || obj.type === 'folder') return
-		window.History.saveState()
-		const sceneW = this.data.meta.width
-		const sceneH = this.data.meta.height
-		const objRatio = obj.width / obj.height
-		const sceneRatio = sceneW / sceneH
+		const obj = this.data.objects.find(o => o.id === id);
+		if (!obj || obj.type === 'folder') return;
+		window.History.saveState();
+		const sceneW = this.data.meta.width;
+		const sceneH = this.data.meta.height;
+		const objRatio = obj.width / obj.height;
+		const sceneRatio = sceneW / sceneH;
 		if (objRatio > sceneRatio) {
-			obj.width = sceneW; obj.height = sceneW / objRatio
-			obj.x = 0; obj.y = (sceneH - obj.height) / 2
+			obj.width = sceneW; obj.height = sceneW / objRatio;
+			obj.x = 0; obj.y = (sceneH - obj.height) / 2;
 		} else {
-			obj.height = sceneH; obj.width = sceneH * objRatio
-			obj.y = 0; obj.x = (sceneW - obj.width) / 2
+			obj.height = sceneH; obj.width = sceneH * objRatio;
+			obj.y = 0; obj.x = (sceneW - obj.width) / 2;
 		}
-		window.PropertiesPanel.update()
+		window.PropertiesPanel.update();
 	},
 	
 	deleteObject: async function (id) {
-		this.selectedIds = [id]
-		this.deleteSelected()
+		this.selectedIds = [id];
+		this.deleteSelected();
 	},
 	
 	deleteSelected: async function () {
-		if (this.selectedIds.length === 0) return
-		const confirmed = await this.confirm(`Delete ${this.selectedIds.length} item(s)?\n(Folders will be unwrapped, keeping contents)`)
+		if (this.selectedIds.length === 0) return;
+		const confirmed = await this.confirm(`Delete ${this.selectedIds.length} item(s)?\n(Folders will be unwrapped, keeping contents)`);
 		if (confirmed) {
-			window.History.saveState()
-			const foldersToDelete = []
-			const objectsToDelete = []
+			window.History.saveState();
+			const foldersToDelete = [];
+			const objectsToDelete = [];
 			this.selectedIds.forEach(id => {
-				const obj = this.data.objects.find(o => o.id === id)
+				const obj = this.data.objects.find(o => o.id === id);
 				if (obj) {
-					if (obj.type === 'folder') foldersToDelete.push(obj.id)
-					else objectsToDelete.push(obj.id)
+					if (obj.type === 'folder') foldersToDelete.push(obj.id);
+					else objectsToDelete.push(obj.id);
 				}
-			})
+			});
 			if (foldersToDelete.length > 0) {
 				this.data.objects.forEach(obj => {
 					if (foldersToDelete.includes(obj.parentId)) {
-						obj.parentId = null
+						obj.parentId = null;
 					}
-				})
+				});
 			}
-			this.data.objects = this.data.objects.filter(o => !this.selectedIds.includes(o.id))
-			this.selectedIds = []
-			window.PropertiesPanel.update()
-			window.Treeview.render()
+			this.data.objects = this.data.objects.filter(o => !this.selectedIds.includes(o.id));
+			this.selectedIds = [];
+			window.PropertiesPanel.update();
+			window.Treeview.render();
 		}
 	},
 	
 	duplicateSelected: function () {
 		if (window.Interaction) {
-			window.Interaction.duplicateSelected()
+			window.Interaction.duplicateSelected();
 		}
 	},
 	
 	groupSelected: async function () {
-		if (this.selectedIds.length < 2) return
-		let groupIndex = 1
+		if (this.selectedIds.length < 2) return;
+		let groupIndex = 1;
 		while (this.data.objects.some(o => o.name === `group${groupIndex}`)) {
-			groupIndex++
+			groupIndex++;
 		}
-		const defaultName = `group${groupIndex}`
-		const name = await this.prompt('Enter group name:', defaultName)
-		if (!name) return
-		window.History.saveState()
+		const defaultName = `group${groupIndex}`;
+		const name = await this.prompt('Enter group name:', defaultName);
+		if (!name) return;
+		window.History.saveState();
 		const newFolder = {
 			id: 'folder_' + Date.now(),
 			name: name,
@@ -638,31 +527,31 @@ window.Editor = {
 			zIndex: 0,
 			visible: true,
 			locked: false
-		}
-		const firstObj = this.data.objects.find(o => o.id === this.selectedIds[0])
-		if (firstObj) newFolder.parentId = firstObj.parentId
-		this.data.objects.push(newFolder)
+		};
+		const firstObj = this.data.objects.find(o => o.id === this.selectedIds[0]);
+		if (firstObj) newFolder.parentId = firstObj.parentId;
+		this.data.objects.push(newFolder);
 		this.selectedIds.forEach(id => {
-			const obj = this.data.objects.find(o => o.id === id)
-			if (obj) obj.parentId = newFolder.id
-		})
-		this.selectedIds = [newFolder.id]
-		window.Treeview.render()
-		window.PropertiesPanel.update()
+			const obj = this.data.objects.find(o => o.id === id);
+			if (obj) obj.parentId = newFolder.id;
+		});
+		this.selectedIds = [newFolder.id];
+		window.Treeview.render();
+		window.PropertiesPanel.update();
 	},
 	
 	toggleMultiProperty: function (prop, value) {
-		if (this.selectedIds.length === 0) return
-		window.History.saveState()
+		if (this.selectedIds.length === 0) return;
+		window.History.saveState();
 		this.selectedIds.forEach(id => {
-			const obj = this.data.objects.find(o => o.id === id)
-			if (obj) obj[prop] = value
-		})
-		window.Treeview.render()
-		window.PropertiesPanel.update()
+			const obj = this.data.objects.find(o => o.id === id);
+			if (obj) obj[prop] = value;
+		});
+		window.Treeview.render();
+		window.PropertiesPanel.update();
 	}
-}
+};
 
 document.addEventListener('DOMContentLoaded', () => {
-	window.Editor.init()
-})
+	window.Editor.init();
+});

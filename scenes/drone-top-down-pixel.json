@@ -35,7 +35,7 @@
       "name": "office-man-1",
       "type": "sprite-anim",
       "spriteName": "office-man-1",
-      "currentAnim": "south",
+      "currentAnim": "west",
       "animSettings": {
         "east": {
           "fps": 10,
@@ -46,7 +46,7 @@
         "north": {
           "fps": 10,
           "stepX": 0,
-          "stepY": 0,
+          "stepY": -10,
           "resetLimit": 0
         },
         "south": {
@@ -57,27 +57,45 @@
         },
         "west": {
           "fps": 10,
-          "stepX": 0,
+          "stepX": -10,
           "stepY": 0,
           "resetLimit": 0
         }
       },
       "parentId": null,
-      "x": 737.99255252008,
-      "y": 1376.4571428571426,
+      "x": 694.3661593289166,
+      "y": 1374.1610483975603,
       "width": 300,
       "height": 300,
       "opacity": 1,
       "zIndex": 0,
       "visible": true,
-      "locked": false
+      "locked": false,
+      "sequence": [
+        {
+          "anim": "east",
+          "limit": 10
+        },
+        {
+          "anim": "south",
+          "limit": 10
+        },
+        {
+          "anim": "west",
+          "limit": 10
+        },
+        {
+          "anim": "north",
+          "limit": 10
+        }
+      ]
     },
     {
       "id": "obj_1767526562000",
       "name": "office-woman-1",
       "type": "sprite-anim",
       "spriteName": "office-woman-1",
-      "currentAnim": "east",
+      "currentAnim": "west",
       "fps": 10,
       "parentId": null,
       "x": 113.93297268072064,
@@ -94,15 +112,48 @@
           "stepX": 13,
           "stepY": 0,
           "resetLimit": 80
+        },
+        "north": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": -10
+        },
+        "south": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": 10
+        },
+        "west": {
+          "fps": 10,
+          "stepX": -10,
+          "stepY": 0
         }
-      }
+      },
+      "sequence": [
+        {
+          "anim": "east",
+          "limit": 70
+        },
+        {
+          "anim": "north",
+          "limit": 50
+        },
+        {
+          "anim": "south",
+          "limit": 50
+        },
+        {
+          "anim": "west",
+          "limit": 70
+        }
+      ]
     },
     {
       "id": "obj_1767527674088",
       "name": "office-woman-1_1",
       "type": "sprite-anim",
       "spriteName": "office-woman-1",
-      "currentAnim": "north",
+      "currentAnim": "south",
       "animSettings": {
         "east": {
           "fps": 10,
@@ -115,17 +166,32 @@
           "stepX": 0,
           "stepY": -10,
           "resetLimit": 46
+        },
+        "south": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": 10
         }
       },
       "parentId": null,
-      "x": 184.4334111408593,
-      "y": 952.9462857142858,
+      "x": 179.84115922599997,
+      "y": 1010.3486472038408,
       "width": 300,
       "height": 300,
       "opacity": 1,
       "zIndex": 0,
       "visible": true,
-      "locked": false
+      "locked": false,
+      "sequence": [
+        {
+          "anim": "north",
+          "limit": 60
+        },
+        {
+          "anim": "south",
+          "limit": 60
+        }
+      ]
     },
     {
       "id": "obj_1767527759788",
@@ -136,7 +202,7 @@
       "animSettings": {
         "east": {
           "fps": 10,
-          "stepX": 0,
+          "stepX": 10,
           "stepY": 0,
           "resetLimit": 0
         },
@@ -145,6 +211,16 @@
           "stepX": 0,
           "stepY": 10,
           "resetLimit": 24
+        },
+        "west": {
+          "fps": 10,
+          "stepX": -10,
+          "stepY": 0
+        },
+        "north": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": -10
         }
       },
       "parentId": null,
@@ -155,7 +231,17 @@
       "opacity": 1,
       "zIndex": 0,
       "visible": true,
-      "locked": false
+      "locked": false,
+      "sequence": [
+        {
+          "anim": "west",
+          "limit": 24
+        },
+        {
+          "anim": "east",
+          "limit": 24
+        }
+      ]
     }
   ]
 }
