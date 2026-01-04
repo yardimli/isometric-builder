@@ -141,7 +141,7 @@
 						</div>
 					</div>
 					<div class="prop-row">
-						<label for="inp-obj-reset-limit" title="Reset offsets after this many frames (0 = loop length)">Reset Limit</label>
+						<label for="inp-obj-reset-limit" title="Reset offsets after this many steps (0 = sync with animation)">Reset Limit</label>
 						<input type="number" id="inp-obj-reset-limit" min="0" onchange="PropertiesPanel.updateSpriteSetting('resetLimit', Number(this.value))">
 					</div>
 				</div>

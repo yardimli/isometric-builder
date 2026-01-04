@@ -161,7 +161,6 @@ window.Editor = {
 		this.data = newData
 		this.data.objects.forEach(obj => {
 			if (obj.parentId === undefined) obj.parentId = null
-			// Ensure animSettings exists for legacy/loaded objects
 			if (obj.type === 'sprite-anim' && !obj.animSettings) {
 				obj.animSettings = {}
 			}
@@ -271,7 +270,6 @@ window.Editor = {
 	addAssetToScene: function (assetPath) {
 		if (!this.data) return
 		window.History.saveState()
-		// ... (Existing logic for static assets) ...
 		let parentId = null
 		if (this.selectedIds.length === 1 && this.selectedIds[0] !== 'scene') {
 			const selected = this.data.objects.find(o => o.id === this.selectedIds[0])
@@ -343,7 +341,7 @@ window.Editor = {
 			type: 'sprite-anim',
 			spriteName: spriteName,
 			currentAnim: '',
-			animSettings: {}, // Stores per-animation settings: { "animName": { fps: 10, stepX: 0, stepY: 0, resetLimit: 0 } }
+			animSettings: {},
 			parentId: parentId,
 			x: this.canvas.width / 2 - 32,
 			y: this.canvas.height / 2 - 32,
@@ -361,7 +359,6 @@ window.Editor = {
 				const animKeys = Object.keys(anims)
 				if (animKeys.length > 0) {
 					newObj.currentAnim = animKeys[0]
-					// Initialize default settings for the first animation
 					newObj.animSettings[newObj.currentAnim] = { fps: 10, stepX: 0, stepY: 0, resetLimit: 0 }
 					
 					const firstFrame = anims[newObj.currentAnim][0]
@@ -396,7 +393,7 @@ window.Editor = {
 	updateAnimations: function (dt) {
 		this.data.objects.forEach(obj => {
 			if (obj.type === 'sprite') {
-				// Legacy sprite logic...
+				// Legacy sprite logic
 				if (!this.animState[obj.id]) this.animState[obj.id] = { frameIndex: 0, timer: 0 }
 				const config = this.data.library.sprites[obj.spriteConfigId]
 				if (!config) return
@@ -412,23 +409,21 @@ window.Editor = {
 					}
 				}
 			} else if (obj.type === 'sprite-anim') {
+				// New Sprite Animation Logic
 				if (!this.animState[obj.id]) this.animState[obj.id] = { frameIndex: 0, timer: 0 }
 				const data = this.spriteData[obj.spriteName]
 				if (!data || !data[obj.currentAnim]) return
 				
-				// Get FPS from specific animation settings, default to 10
 				const settings = obj.animSettings[obj.currentAnim] || { fps: 10 }
 				const fps = settings.fps || 10
 				
-				const frameCount = data[obj.currentAnim].length
 				const state = this.animState[obj.id]
 				state.timer += dt
 				if (state.timer >= (1 / fps)) {
 					state.timer = 0
 					state.frameIndex++
-					if (state.frameIndex >= frameCount) {
-						state.frameIndex = 0
-					}
+					// Note: We do NOT reset frameIndex here. We let it grow indefinitely
+					// to support movement offsets that extend beyond the animation loop length.
 				}
 			}
 		})
@@ -486,7 +481,6 @@ window.Editor = {
 	},
 	
 	drawSprite: function (obj) {
-		// Legacy sprite draw logic
 		const config = this.data.library.sprites[obj.spriteConfigId]
 		if (!config) return
 		const img = this.images[config.sourceFile]
@@ -506,21 +500,27 @@ window.Editor = {
 		
 		const frames = data[obj.currentAnim]
 		const state = this.animState[obj.id] || { frameIndex: 0 }
-		const idx = Math.min(state.frameIndex, frames.length - 1)
-		const frameFile = frames[idx]
+		
+		// 1. Determine Image Frame (Loops with animation)
+		const frameIdx = state.frameIndex % frames.length
+		const frameFile = frames[frameIdx]
 		
 		const path = `assets/sprite-animation/${obj.spriteName}/${obj.currentAnim}/${frameFile}`
 		const img = this.images[path]
 		
-		// Calculate Offset based on settings
+		// 2. Determine Position Offset
 		const settings = obj.animSettings[obj.currentAnim] || { stepX: 0, stepY: 0, resetLimit: 0 }
 		const stepX = settings.stepX || 0
 		const stepY = settings.stepY || 0
 		const resetLimit = settings.resetLimit || 0
 		
-		// If resetLimit is 0, we might loop continuously or use frame count.
-		// Assuming 0 means "reset at end of animation" (modulo frame count)
-		const mod = resetLimit > 0 ? resetLimit : frames.length
+		// If resetLimit is set (e.g. 100), we count 0 to 100 (101 steps) before reset.
+		// If resetLimit is 0, we sync with the animation loop length.
+		let mod = frames.length
+		if (resetLimit > 0) {
+			mod = resetLimit + 1
+		}
+		
 		const offsetMultiplier = state.frameIndex % mod
 		
 		const drawX = obj.x + (stepX * offsetMultiplier)
@@ -533,7 +533,6 @@ window.Editor = {
 		}
 	},
 	
-	// ... (Rest of the file remains unchanged) ...
 	drawGrid: function () {
 		const sz = this.data.meta.grid.size
 		this.ctx.beginPath(); this.ctx.strokeStyle = 'rgba(255,255,255,0.4)'

@@ -31,60 +31,42 @@
       "locked": true
     },
     {
-      "id": "obj_1767522450438",
-      "name": "south",
-      "type": "static",
-      "asset": "assets/animation-sheet/office-woman-1/rotations/south.png",
+      "id": "obj_1767529639321",
+      "name": "office-man-1",
+      "type": "sprite-anim",
+      "spriteName": "office-man-1",
+      "currentAnim": "south",
+      "animSettings": {
+        "east": {
+          "fps": 10,
+          "stepX": 10,
+          "stepY": 0,
+          "resetLimit": 25
+        },
+        "north": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": 0,
+          "resetLimit": 0
+        },
+        "south": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": 10,
+          "resetLimit": 52
+        },
+        "west": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": 0,
+          "resetLimit": 0
+        }
+      },
       "parentId": null,
-      "x": 270.9966853318062,
-      "y": 269.49803636246867,
-      "width": 256,
-      "height": 256,
-      "opacity": 1,
-      "zIndex": 0,
-      "visible": true,
-      "locked": false
-    },
-    {
-      "id": "obj_1767522464209",
-      "name": "north",
-      "type": "static",
-      "asset": "assets/animation-sheet/office-woman-1/rotations/north.png",
-      "parentId": null,
-      "x": 213.49633561910667,
-      "y": 499.49850559533326,
-      "width": 256,
-      "height": 256,
-      "opacity": 1,
-      "zIndex": 0,
-      "visible": true,
-      "locked": false
-    },
-    {
-      "id": "obj_1767522534173",
-      "name": "east",
-      "type": "static",
-      "asset": "assets/animation-sheet/office-woman-1/rotations/east.png",
-      "parentId": null,
-      "x": 575.9985403296026,
-      "y": 591.9986943085506,
-      "width": 256,
-      "height": 256,
-      "opacity": 1,
-      "zIndex": 0,
-      "visible": true,
-      "locked": false
-    },
-    {
-      "id": "obj_1767522549648",
-      "name": "west",
-      "type": "static",
-      "asset": "assets/animation-sheet/office-woman-1/rotations/west.png",
-      "parentId": null,
-      "x": 1028.5012924164976,
-      "y": 549.4986076024777,
-      "width": 256,
-      "height": 256,
+      "x": 737.99255252008,
+      "y": 1376.4571428571426,
+      "width": 300,
+      "height": 300,
       "opacity": 1,
       "zIndex": 0,
       "visible": true,
@@ -98,10 +80,78 @@
       "currentAnim": "east",
       "fps": 10,
       "parentId": null,
-      "x": 752.4383761274726,
-      "y": 1512.2468571428574,
+      "x": 113.93297268072064,
+      "y": 2194.0845714285715,
       "width": 292.68238912427546,
       "height": 292.68238912427546,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false,
+      "animSettings": {
+        "east": {
+          "fps": 10,
+          "stepX": 13,
+          "stepY": 0,
+          "resetLimit": 80
+        }
+      }
+    },
+    {
+      "id": "obj_1767527674088",
+      "name": "office-woman-1_1",
+      "type": "sprite-anim",
+      "spriteName": "office-woman-1",
+      "currentAnim": "north",
+      "animSettings": {
+        "east": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": 0,
+          "resetLimit": 0
+        },
+        "north": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": -10,
+          "resetLimit": 46
+        }
+      },
+      "parentId": null,
+      "x": 184.4334111408593,
+      "y": 952.9462857142858,
+      "width": 300,
+      "height": 300,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1767527759788",
+      "name": "office-woman-1_2",
+      "type": "sprite-anim",
+      "spriteName": "office-woman-1",
+      "currentAnim": "south",
+      "animSettings": {
+        "east": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": 0,
+          "resetLimit": 0
+        },
+        "south": {
+          "fps": 10,
+          "stepX": 0,
+          "stepY": 10,
+          "resetLimit": 24
+        }
+      },
+      "parentId": null,
+      "x": 1249.3747082217772,
+      "y": 408.59428571428555,
+      "width": 300,
+      "height": 300,
       "opacity": 1,
       "zIndex": 0,
       "visible": true,
