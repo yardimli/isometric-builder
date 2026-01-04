@@ -15,9 +15,10 @@
 			<button id="btn-open-modal" type="button">📂 Open</button>
 			<button id="btn-save" type="button">💾 Save</button>
 			<button id="btn-save-as" type="button">💾 Save As...</button>
-			<!-- New Button: Default Size -->
-			<button id="btn-default-size" type="button" title="Set Scene to 1024x1024">📏 1024x1024</button>
+			<button id="btn-new-scene" type="button" title="Clear Scene">📄 New</button>
 			<button id="btn-assets-modal" type="button">🖼️ Assets</button>
+			<!-- NEW: Sprite Button -->
+			<button id="btn-sprites-modal" type="button">👾 Sprites</button>
 			<span class="separator">|</span>
 			<button id="btn-duplicate" type="button" title="Duplicate Selected (Ctrl+D)">📄 Duplicate</button>
 			<span class="separator">|</span>
@@ -117,6 +118,18 @@
 					<label>
 						<input type="checkbox" id="chk-obj-locked" onchange="PropertiesPanel.updateObjProp('locked', this.checked)"> Locked
 					</label>
+				</div>
+				
+				<!-- NEW: Sprite Animation Settings -->
+				<div id="grp-obj-sprite" style="display:none; border-top:1px solid #444; margin-top:10px; padding-top:10px;">
+					<div class="prop-row">
+						<label for="sel-obj-anim">Animation</label>
+						<select id="sel-obj-anim" onchange="PropertiesPanel.updateObjProp('currentAnim', this.value)"></select>
+					</div>
+					<div class="prop-row">
+						<label for="inp-obj-fps">FPS</label>
+						<input type="number" id="inp-obj-fps" min="1" max="60" onchange="PropertiesPanel.updateObjProp('fps', Number(this.value))">
+					</div>
 				</div>
 				
 				<!-- Transform Group (Hidden for Folders) -->
@@ -253,6 +266,16 @@
 	</div>
 </div>
 
+<!-- NEW: Sprite Browser Modal -->
+<div id="modal-sprites" class="modal">
+	<div class="modal-content large">
+		<span class="close" role="button" tabindex="0">&times;</span>
+		<h2>Sprite Animations</h2>
+		<div id="sprite-grid" class="asset-grid"></div>
+		<p class="hint-text">Select a sprite character to add to the scene.</p>
+	</div>
+</div>
+
 <!-- CUSTOM DIALOGS -->
 <dialog id="dlg-alert" class="custom-dialog">
 	<p id="dlg-alert-msg"></p>
@@ -277,6 +300,7 @@
 </dialog>
 
 <script src="js/assets.js"></script>
+<script src="js/sprite_browser.js"></script> <!-- NEW -->
 <script src="js/history.js"></script>
 <script src="js/properties.js"></script>
 <script src="js/treeview.js"></script>

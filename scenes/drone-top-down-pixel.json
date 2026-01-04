@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "version": "1.0",
+    "sceneName": "drone-top-down-pixel",
+    "width": 1696,
+    "height": 2528,
+    "backgroundColor": "#333",
+    "grid": {
+      "enabled": false,
+      "size": 32,
+      "snap": false
+    }
+  },
+  "library": {
+    "sprites": {}
+  },
+  "objects": [
+    {
+      "id": "obj_1767522391995",
+      "name": "full-office-pixel",
+      "type": "static",
+      "asset": "assets/drone-office/full-office-pixel.png",
+      "parentId": null,
+      "x": 0,
+      "y": 0,
+      "width": 1696,
+      "height": 2528,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": true
+    },
+    {
+      "id": "obj_1767522450438",
+      "name": "south",
+      "type": "static",
+      "asset": "assets/animation-sheet/office-woman-1/rotations/south.png",
+      "parentId": null,
+      "x": 270.9966853318062,
+      "y": 269.49803636246867,
+      "width": 256,
+      "height": 256,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1767522464209",
+      "name": "north",
+      "type": "static",
+      "asset": "assets/animation-sheet/office-woman-1/rotations/north.png",
+      "parentId": null,
+      "x": 213.49633561910667,
+      "y": 499.49850559533326,
+      "width": 256,
+      "height": 256,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1767522534173",
+      "name": "east",
+      "type": "static",
+      "asset": "assets/animation-sheet/office-woman-1/rotations/east.png",
+      "parentId": null,
+      "x": 575.9985403296026,
+      "y": 591.9986943085506,
+      "width": 256,
+      "height": 256,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1767522549648",
+      "name": "west",
+      "type": "static",
+      "asset": "assets/animation-sheet/office-woman-1/rotations/west.png",
+      "parentId": null,
+      "x": 1028.5012924164976,
+      "y": 549.4986076024777,
+      "width": 256,
+      "height": 256,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1767526562000",
+      "name": "office-woman-1",
+      "type": "sprite-anim",
+      "spriteName": "office-woman-1",
+      "currentAnim": "east",
+      "fps": 10,
+      "parentId": null,
+      "x": 752.4383761274726,
+      "y": 1512.2468571428574,
+      "width": 292.68238912427546,
+      "height": 292.68238912427546,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    }
+  ]
+}

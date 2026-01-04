@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "version": "1.0",
+    "sceneName": "drone2",
+    "width": 1856,
+    "height": 4600,
+    "backgroundColor": "#333",
+    "grid": {
+      "enabled": false,
+      "size": 32,
+      "snap": false
+    }
+  },
+  "library": {
+    "sprites": {}
+  },
+  "objects": [
+    {
+      "id": "obj_1767181514976",
+      "name": "drone-game-top-empty",
+      "type": "static",
+      "asset": "assets/background/drone-game-top-empty.png",
+      "parentId": null,
+      "x": 0,
+      "y": 0,
+      "width": 1856,
+      "height": 2304,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": true
+    },
+    {
+      "id": "obj_1767181557586",
+      "name": "drone-game-bottom-empty",
+      "type": "static",
+      "asset": "assets/background/drone-game-bottom-empty.png",
+      "parentId": null,
+      "x": 30,
+      "y": 2298.6666666666665,
+      "width": 1824,
+      "height": 2336,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": true
+    }
+  ]
+}

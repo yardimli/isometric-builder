@@ -13,6 +13,15 @@ const SceneManager = {
 		document.getElementById('btn-save').onclick = () => this.saveScene(null, true, true);
 		document.getElementById('btn-save-as').onclick = () => this.openFileBrowser('save');
 		
+		// New Scene Button
+		document.getElementById('btn-new-scene').onclick = async () => {
+			if (window.Editor && window.Editor.isDirty) {
+				const confirm = await window.Editor.confirm("Unsaved changes will be lost. Create new scene?");
+				if (!confirm) return;
+			}
+			this.createEmptyScene();
+		};
+		
 		document.getElementById('btn-create-folder').onclick = () => this.createFolder();
 		document.getElementById('btn-browser-confirm').onclick = () => {
 			const name = document.getElementById('inp-browser-filename').value;
@@ -114,7 +123,7 @@ const SceneManager = {
 		const emptyData = {
 			meta: {
 				version: '1.0',
-				sceneName: 'New Scene',
+				sceneName: 'Unnamed',
 				width: 800,
 				height: 600,
 				backgroundColor: '#333',
@@ -124,7 +133,6 @@ const SceneManager = {
 			objects: []
 		};
 		this.currentScenePath = null;
-		document.getElementById('scene-name').innerText = 'Unsaved';
 		if (window.Editor) {
 			window.Editor.loadSceneData(emptyData);
 		}

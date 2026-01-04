@@ -1,0 +1,79 @@
+{
+  "meta": {
+    "version": "1.0",
+    "sceneName": "drone-3d",
+    "width": 1536,
+    "height": 2752,
+    "backgroundColor": "#333",
+    "grid": {
+      "enabled": false,
+      "size": 32,
+      "snap": false
+    }
+  },
+  "library": {
+    "sprites": {}
+  },
+  "objects": [
+    {
+      "id": "obj_1767506928974",
+      "name": "full-office",
+      "type": "static",
+      "asset": "assets/drone-office/full-office.png",
+      "parentId": null,
+      "x": 0,
+      "y": 0,
+      "width": 1536,
+      "height": 2752,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": true
+    },
+    {
+      "id": "obj_1767506970436",
+      "name": "woman-1",
+      "type": "static",
+      "asset": "assets/people/woman-1.png",
+      "parentId": null,
+      "x": 112.15597437712347,
+      "y": 692.1503741624387,
+      "width": 281.4513703319087,
+      "height": 281.4513703319087,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1767515751772",
+      "name": "south",
+      "type": "static",
+      "asset": "assets/animation-sheet/office-woman-1/rotations/south.png",
+      "parentId": null,
+      "x": 647.9346476548284,
+      "y": 1711.9817142857141,
+      "width": 294.69513122478907,
+      "height": 294.69513122478907,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "obj_1767515824668",
+      "name": "office-woman-2",
+      "type": "static",
+      "asset": "assets/people/office-woman-2.png",
+      "parentId": null,
+      "x": 380.593399464129,
+      "y": 620.6171428571429,
+      "width": 333.96362058451166,
+      "height": 333.96362058451166,
+      "opacity": 1,
+      "zIndex": 0,
+      "visible": true,
+      "locked": false
+    }
+  ]
+}
