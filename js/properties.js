@@ -9,6 +9,7 @@ window.PropertiesPanel = {
 	panelScene: null,
 	panelObject: null,
 	panelMulti: null,
+	editingSequenceIndex: -1, // Tracks which sequence step is being edited
 	
 	init: function () {
 		this.panelEmpty = document.getElementById('prop-empty');
@@ -165,6 +166,11 @@ window.PropertiesPanel = {
 			// Render the Sequence List
 			this.renderSequencerList(obj);
 			
+			// Reset Edit Mode if we switched objects
+			if (this.editingSequenceIndex !== -1) {
+				this.cancelEdit();
+			}
+			
 			// Render Settings for the *currently selected animation in the dropdown*
 			// Note: obj.currentAnim here acts as "currently editing settings for..."
 			const currentSettings = obj.animSettings[obj.currentAnim] || { fps: 10, stepX: 0, stepY: 0 };
@@ -304,6 +310,20 @@ window.PropertiesPanel = {
 	
 	// --- Sequencer Logic ---
 	
+	toggleSequenceType: function () {
+		const type = document.querySelector('input[name="seq-type"]:checked').value;
+		const animGroup = document.getElementById('seq-input-anim');
+		const pauseGroup = document.getElementById('seq-input-pause');
+		
+		if (type === 'pause') {
+			animGroup.style.display = 'none';
+			pauseGroup.style.display = 'block';
+		} else {
+			animGroup.style.display = 'flex';
+			pauseGroup.style.display = 'none';
+		}
+	},
+	
 	renderSequencerList: function (obj) {
 		const list = document.getElementById('seq-list');
 		list.innerHTML = '';
@@ -315,17 +335,33 @@ window.PropertiesPanel = {
 			row.style.gap = '5px';
 			row.style.marginBottom = '5px';
 			row.style.alignItems = 'center';
-			row.style.background = '#333';
+			row.style.background = (index === this.editingSequenceIndex) ? '#444' : '#333';
+			row.style.border = (index === this.editingSequenceIndex) ? '1px solid #d9a521' : '1px solid transparent';
 			row.style.padding = '4px';
 			
-			const limitText = item.limit > 0 ? `${item.limit} steps` : 'Infinite';
+			let label = '';
+			let subLabel = '';
+			
+			if (item.type === 'pause') {
+				label = '⏸ Pause';
+				subLabel = `${item.duration}s`;
+			} else {
+				// Default to animation if type is missing (backward compatibility)
+				label = `🎬 ${item.anim}`;
+				subLabel = (item.limit > 0) ? `${item.limit} steps` : 'Infinite';
+			}
 			
 			row.innerHTML = `
         <span style="font-size:11px; color:#888; width:15px;">${index + 1}.</span>
-        <span style="flex:1; font-size:12px;">${item.anim}</span>
-        <span style="font-size:11px; color:#aaa;">(${limitText})</span>
+        <span style="flex:1; font-size:12px;">${label}</span>
+        <span style="font-size:11px; color:#aaa;">(${subLabel})</span>
+        <button class="btn-seq-edit" style="background:#007acc; border:none; color:white; cursor:pointer; padding:2px 6px; margin-right:2px;">✎</button>
         <button class="btn-seq-del" style="background:#a31515; border:none; color:white; cursor:pointer; padding:2px 6px;">x</button>
       `;
+			
+			row.querySelector('.btn-seq-edit').onclick = () => {
+				this.editSequenceStep(index, item);
+			};
 			
 			row.querySelector('.btn-seq-del').onclick = () => {
 				this.removeSequenceStep(index);
@@ -341,21 +377,107 @@ window.PropertiesPanel = {
 		const obj = window.Editor.data.objects.find(o => o.id === id);
 		if (!obj) return;
 		
-		const anim = document.getElementById('sel-seq-anim').value;
-		const limit = parseInt(document.getElementById('inp-seq-limit').value) || 0;
+		const type = document.querySelector('input[name="seq-type"]:checked').value;
+		let newItem = {};
 		
-		if (!anim) return;
+		if (type === 'pause') {
+			const duration = parseFloat(document.getElementById('inp-seq-duration').value) || 1.0;
+			newItem = { type: 'pause', duration: duration };
+		} else {
+			const anim = document.getElementById('sel-seq-anim').value;
+			const limit = parseInt(document.getElementById('inp-seq-limit').value) || 0;
+			if (!anim) return;
+			newItem = { type: 'anim', anim: anim, limit: limit };
+			
+			// Ensure settings exist for this animation
+			if (!obj.animSettings[anim]) {
+				obj.animSettings[anim] = { fps: 10, stepX: 0, stepY: 0 };
+			}
+		}
 		
 		window.History.saveState();
-		obj.sequence.push({ anim: anim, limit: limit });
-		
-		// Ensure settings exist for this animation so stepX/Y work
-		if (!obj.animSettings[anim]) {
-			obj.animSettings[anim] = { fps: 10, stepX: 0, stepY: 0 };
-		}
+		obj.sequence.push(newItem);
 		
 		if (window.SpriteAnimator) window.SpriteAnimator.resetState(obj.id);
 		this.update();
+	},
+	
+	editSequenceStep: function (index, item) {
+		this.editingSequenceIndex = index;
+		
+		// Set UI to Edit Mode
+		document.getElementById('btn-seq-add').style.display = 'none';
+		document.getElementById('btn-seq-update').style.display = 'block';
+		document.getElementById('btn-seq-cancel').style.display = 'block';
+		
+		// Populate inputs
+		const type = item.type || 'anim';
+		const radios = document.getElementsByName('seq-type');
+		for (const r of radios) {
+			r.checked = (r.value === type);
+		}
+		this.toggleSequenceType();
+		
+		if (type === 'pause') {
+			document.getElementById('inp-seq-duration').value = item.duration;
+		} else {
+			document.getElementById('sel-seq-anim').value = item.anim;
+			document.getElementById('inp-seq-limit').value = item.limit;
+		}
+		
+		// Refresh list to show highlight
+		if (window.Editor.selectedIds.length === 1) {
+			const obj = window.Editor.data.objects.find(o => o.id === window.Editor.selectedIds[0]);
+			this.renderSequencerList(obj);
+		}
+	},
+	
+	updateSequenceStep: function () {
+		if (this.editingSequenceIndex === -1) return;
+		if (window.Editor.selectedIds.length !== 1) return;
+		const id = window.Editor.selectedIds[0];
+		const obj = window.Editor.data.objects.find(o => o.id === id);
+		if (!obj) return;
+		
+		const type = document.querySelector('input[name="seq-type"]:checked').value;
+		let updatedItem = {};
+		
+		if (type === 'pause') {
+			const duration = parseFloat(document.getElementById('inp-seq-duration').value) || 1.0;
+			updatedItem = { type: 'pause', duration: duration };
+		} else {
+			const anim = document.getElementById('sel-seq-anim').value;
+			const limit = parseInt(document.getElementById('inp-seq-limit').value) || 0;
+			if (!anim) return;
+			updatedItem = { type: 'anim', anim: anim, limit: limit };
+			
+			if (!obj.animSettings[anim]) {
+				obj.animSettings[anim] = { fps: 10, stepX: 0, stepY: 0 };
+			}
+		}
+		
+		window.History.saveState();
+		obj.sequence[this.editingSequenceIndex] = updatedItem;
+		
+		// Reset UI
+		this.cancelEdit();
+		if (window.SpriteAnimator) window.SpriteAnimator.resetState(obj.id);
+	},
+	
+	cancelEdit: function () {
+		this.editingSequenceIndex = -1;
+		document.getElementById('btn-seq-add').style.display = 'block';
+		document.getElementById('btn-seq-update').style.display = 'none';
+		document.getElementById('btn-seq-cancel').style.display = 'none';
+		
+		// Reset inputs to default
+		document.getElementById('inp-seq-limit').value = '';
+		document.getElementById('inp-seq-duration').value = '1.0';
+		
+		if (window.Editor.selectedIds.length === 1) {
+			const obj = window.Editor.data.objects.find(o => o.id === window.Editor.selectedIds[0]);
+			this.renderSequencerList(obj);
+		}
 	},
 	
 	removeSequenceStep: function (index) {
@@ -365,6 +487,14 @@ window.PropertiesPanel = {
 		if (!obj) return;
 		
 		window.History.saveState();
+		
+		// If deleting the item currently being edited, cancel edit mode
+		if (index === this.editingSequenceIndex) {
+			this.cancelEdit();
+		} else if (index < this.editingSequenceIndex) {
+			this.editingSequenceIndex--; // Shift index if deleting item above
+		}
+		
 		obj.sequence.splice(index, 1);
 		if (window.SpriteAnimator) window.SpriteAnimator.resetState(obj.id);
 		this.update();

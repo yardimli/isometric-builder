@@ -5,7 +5,7 @@
 
 window.SpriteAnimator = {
 	spriteData: {}, // Cache for sprite frame lists
-	// Runtime state for animations: { objId: { timer, sequenceIndex, stepFrameIndex, accX, accY } }
+	// Runtime state for animations: { objId: { timer, sequenceIndex, stepFrameIndex, accX, accY, pauseTimer, lastAnim, lastFrameIndex } }
 	states: {},
 	
 	init: function () {
@@ -52,7 +52,7 @@ window.SpriteAnimator = {
 	
 	/**
 	 * Updates animation state based on delta time.
-	 * Handles sequencing logic (accumulating offsets, switching sequence steps).
+	 * Handles sequencing logic (accumulating offsets, switching sequence steps, pauses).
 	 * @param {number} dt - Delta time in seconds
 	 * @param {Array} objects - List of scene objects
 	 */
@@ -67,7 +67,10 @@ window.SpriteAnimator = {
 					sequenceIndex: 0,
 					stepFrameIndex: 0,
 					accX: 0, // Accumulated X from previous steps
-					accY: 0 // Accumulated Y from previous steps
+					accY: 0, // Accumulated Y from previous steps
+					pauseTimer: 0,
+					lastAnim: null, // Track last valid animation to draw during pause
+					lastFrameIndex: 0
 				};
 			}
 			
@@ -78,17 +81,45 @@ window.SpriteAnimator = {
 			// If sequence is empty, do nothing
 			if (!obj.sequence || obj.sequence.length === 0) return;
 			
-			// Get current sequence step
 			// Ensure index is valid
 			if (state.sequenceIndex >= obj.sequence.length) {
 				state.sequenceIndex = 0;
 				state.accX = 0;
 				state.accY = 0;
+				state.pauseTimer = 0;
 			}
 			
 			const seqItem = obj.sequence[state.sequenceIndex];
+			const type = seqItem.type || 'anim'; // Default to 'anim' for backward compatibility
+			
+			// --- PAUSE LOGIC ---
+			if (type === 'pause') {
+				state.pauseTimer += dt;
+				const duration = seqItem.duration || 1.0;
+				
+				if (state.pauseTimer >= duration) {
+					// Pause finished, move to next step
+					state.pauseTimer = 0;
+					state.sequenceIndex++;
+					state.stepFrameIndex = 0;
+					
+					// Loop Sequence
+					if (state.sequenceIndex >= obj.sequence.length) {
+						state.sequenceIndex = 0;
+						state.accX = 0;
+						state.accY = 0;
+					}
+				}
+				return; // Don't process animation logic while paused
+			}
+			
+			// --- ANIMATION LOGIC ---
 			const currentAnimName = seqItem.anim;
 			const stepLimit = parseInt(seqItem.limit) || 0; // 0 = infinite loop for this step
+			
+			// Update last valid animation (for drawing during pauses later)
+			state.lastAnim = currentAnimName;
+			state.lastFrameIndex = state.stepFrameIndex;
 			
 			// Get settings for the active animation
 			const settings = (obj.animSettings && obj.animSettings[currentAnimName])
@@ -140,7 +171,6 @@ window.SpriteAnimator = {
 			return;
 		}
 		
-		// If sequence is empty, don't draw (or draw placeholder?)
 		if (!obj.sequence || obj.sequence.length === 0) return;
 		
 		const state = this.states[obj.id] || { sequenceIndex: 0, stepFrameIndex: 0, accX: 0, accY: 0 };
@@ -149,27 +179,46 @@ window.SpriteAnimator = {
 		if (state.sequenceIndex >= obj.sequence.length) state.sequenceIndex = 0;
 		
 		const seqItem = obj.sequence[state.sequenceIndex];
-		const animName = seqItem.anim;
+		const type = seqItem.type || 'anim';
 		
-		if (!data[animName]) return; // Animation not found
+		let animName = '';
+		let frameIdx = 0;
+		let currentStepOffsetX = 0;
+		let currentStepOffsetY = 0;
 		
-		const frames = data[animName];
-		// Loop frame index within the specific animation frames
-		const frameIdx = state.stepFrameIndex % frames.length;
-		const frameFile = frames[frameIdx];
+		if (type === 'pause') {
+			// If paused, draw the last valid animation frame
+			if (state.lastAnim && data[state.lastAnim]) {
+				animName = state.lastAnim;
+				const frames = data[animName];
+				frameIdx = (state.lastFrameIndex || 0) % frames.length;
+				// Note: During pause, we don't add additional step offsets, just the accumulated ones
+			} else {
+				// If pause is the very first step, try to draw the first frame of the next anim or just return
+				return;
+			}
+		} else {
+			// Normal Animation
+			animName = seqItem.anim;
+			if (!data[animName]) return;
+			
+			const frames = data[animName];
+			frameIdx = state.stepFrameIndex % frames.length;
+			
+			// Calculate Step Offsets
+			const settings = (obj.animSettings && obj.animSettings[animName])
+				? obj.animSettings[animName]
+				: { stepX: 0, stepY: 0 };
+			
+			currentStepOffsetX = (settings.stepX || 0) * state.stepFrameIndex;
+			currentStepOffsetY = (settings.stepY || 0) * state.stepFrameIndex;
+		}
 		
+		const frameFile = data[animName][frameIdx];
 		const path = `assets/sprite-animation/${obj.spriteName}/${animName}/${frameFile}`;
 		const img = window.Editor.images[path];
 		
-		// Calculate Position
-		// Base Object Position + Accumulated Sequence Offset + Current Step Offset
-		const settings = (obj.animSettings && obj.animSettings[animName])
-			? obj.animSettings[animName]
-			: { stepX: 0, stepY: 0 };
-		
-		const currentStepOffsetX = (settings.stepX || 0) * state.stepFrameIndex;
-		const currentStepOffsetY = (settings.stepY || 0) * state.stepFrameIndex;
-		
+		// Calculate Final Position
 		const drawX = obj.x + state.accX + currentStepOffsetX;
 		const drawY = obj.y + state.accY + currentStepOffsetY;
 		
@@ -191,7 +240,10 @@ window.SpriteAnimator = {
 				sequenceIndex: 0,
 				stepFrameIndex: 0,
 				accX: 0,
-				accY: 0
+				accY: 0,
+				pauseTimer: 0,
+				lastAnim: null,
+				lastFrameIndex: 0
 			};
 		}
 	}

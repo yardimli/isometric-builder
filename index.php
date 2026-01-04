@@ -1,9 +1,10 @@
+<!-- index.php -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Game Editor Engine v1.8</title>
+	<title>Game Editor Engine v1.9</title>
 	<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -151,15 +152,45 @@
 						<div id="seq-list" style="max-height:150px; overflow-y:auto; border:1px solid #444; padding:5px; margin-bottom:10px;">
 							<!-- Sequence items populated by JS -->
 						</div>
-						<div class="prop-row-dual">
+						
+						<!-- Step Type Selector -->
+						<div class="prop-row" style="margin-bottom: 5px;">
+							<label style="font-size:11px; color:#aaa;">Step Type:</label>
+							<div style="display:flex; gap:10px;">
+								<label style="font-size:12px; display:flex; align-items:center; gap:4px;">
+									<input type="radio" name="seq-type" value="anim" checked onchange="PropertiesPanel.toggleSequenceType()"> Animation
+								</label>
+								<label style="font-size:12px; display:flex; align-items:center; gap:4px;">
+									<input type="radio" name="seq-type" value="pause" onchange="PropertiesPanel.toggleSequenceType()"> Pause
+								</label>
+							</div>
+						</div>
+						
+						<!-- Animation Input Group -->
+						<div id="seq-input-anim" class="prop-row-dual">
 							<div style="flex:2;">
+								<label style="font-size:11px;">Animation</label>
 								<select id="sel-seq-anim" style="width:100%;"></select>
 							</div>
 							<div style="flex:1;">
-								<input type="number" id="inp-seq-limit" placeholder="Steps" style="width:100%;" title="0 = Infinite Loop">
+								<label style="font-size:11px;">Limit (Steps)</label>
+								<input type="number" id="inp-seq-limit" placeholder="0" style="width:100%;" title="0 = Infinite Loop">
 							</div>
 						</div>
-						<button class="primary-btn" style="width:100%; margin-top:5px;" onclick="PropertiesPanel.addSequenceStep()">+ Add Step</button>
+						
+						<!-- Pause Input Group -->
+						<div id="seq-input-pause" class="prop-row" style="display:none;">
+							<label style="font-size:11px;">Duration (Seconds)</label>
+							<input type="number" id="inp-seq-duration" placeholder="1.0" step="0.1" style="width:100%;">
+						</div>
+						
+						<!-- Action Buttons -->
+						<div style="display:flex; gap:5px; margin-top:5px;">
+							<button id="btn-seq-add" class="primary-btn" style="flex:1;" onclick="PropertiesPanel.addSequenceStep()">+ Add Step</button>
+							<button id="btn-seq-update" class="primary-btn" style="flex:1; display:none; background:#d9a521; color:#000;" onclick="PropertiesPanel.updateSequenceStep()">Update</button>
+							<button id="btn-seq-cancel" style="flex:1; display:none;" onclick="PropertiesPanel.cancelEdit()">Cancel</button>
+						</div>
+						
 						<p class="hint-text" style="font-size:10px; margin-top:5px;">
 							* Step X/Y values are taken from the animation's individual settings.
 						</p>
@@ -336,7 +367,7 @@
 <script src="js/assets.js"></script>
 <script src="js/sprite_browser.js"></script>
 <script src="js/history.js"></script>
-<script src="js/sprite_animator.js"></script> <!-- New Script -->
+<script src="js/sprite_animator.js"></script>
 <script src="js/properties.js"></script>
 <script src="js/treeview.js"></script>
 <script src="js/scene_manager.js"></script>
