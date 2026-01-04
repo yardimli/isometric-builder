@@ -9,7 +9,7 @@ window.Editor = {
 	wrapper: null,
 	data: null,
 	images: {},
-	spriteData: {}, // Cache for sprite animation frames: { "Hero": { "north": ["f1.png", ...], ... } }
+	spriteData: {}, // Cache for sprite animation frames
 	isPlaying: false,
 	selectedIds: [],
 	lastTime: 0,
@@ -75,12 +75,10 @@ window.Editor = {
 		
 		// Keyboard Shortcuts
 		window.addEventListener('keydown', (e) => {
-			// Duplicate: Ctrl + D
 			if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
 				e.preventDefault()
 				window.Interaction.duplicateSelected()
 			}
-			// Delete: Delete key
 			if (e.key === 'Delete') {
 				if (this.selectedIds.length > 0) {
 					this.deleteSelected()
@@ -163,6 +161,10 @@ window.Editor = {
 		this.data = newData
 		this.data.objects.forEach(obj => {
 			if (obj.parentId === undefined) obj.parentId = null
+			// Ensure animSettings exists for legacy/loaded objects
+			if (obj.type === 'sprite-anim' && !obj.animSettings) {
+				obj.animSettings = {}
+			}
 		})
 		
 		document.getElementById('chk-grid-visible').checked = this.data.meta.grid.enabled
@@ -215,7 +217,6 @@ window.Editor = {
 			if (obj.type === 'static' && obj.asset) {
 				promises.push(this.loadImage(obj.asset, obj.asset))
 			} else if (obj.type === 'sprite-anim') {
-				// Load sprite configuration and frames
 				promises.push(this.loadSpriteData(obj.spriteName))
 			}
 		})
@@ -237,9 +238,6 @@ window.Editor = {
 		})
 	},
 	
-	/**
-	 * Fetches animation structure for a sprite character and loads frames.
-	 */
 	loadSpriteData: function (spriteName) {
 		return new Promise((resolve) => {
 			if (this.spriteData[spriteName]) return resolve()
@@ -253,7 +251,6 @@ window.Editor = {
 				.then(res => {
 					if (res.success) {
 						this.spriteData[spriteName] = res.data
-						// Preload first frame of each animation to ensure size is known
 						const imgPromises = []
 						for (const anim in res.data) {
 							const frames = res.data[anim]
@@ -273,9 +270,8 @@ window.Editor = {
 	
 	addAssetToScene: function (assetPath) {
 		if (!this.data) return
-		
 		window.History.saveState()
-		
+		// ... (Existing logic for static assets) ...
 		let parentId = null
 		if (this.selectedIds.length === 1 && this.selectedIds[0] !== 'scene') {
 			const selected = this.data.objects.find(o => o.id === this.selectedIds[0])
@@ -287,7 +283,6 @@ window.Editor = {
 		const fileName = assetPath.split('/').pop().replace(/\.[^/.]+$/, '')
 		let uniqueName = fileName
 		let suffix = 1
-		
 		while (this.data.objects.some(o => o.name === uniqueName)) {
 			uniqueName = `${fileName}_${suffix}`
 			suffix++
@@ -317,16 +312,12 @@ window.Editor = {
 			}
 			this.data.objects.push(newObj)
 			this.selectedIds = [newObj.id]
-			
 			window.PropertiesPanel.update()
 			window.Treeview.render()
 			document.getElementById('modal-assets').style.display = 'none'
 		})
 	},
 	
-	/**
-	 * Adds a Sprite Animation object to the scene.
-	 */
 	addSpriteToScene: function (spriteName) {
 		if (!this.data) return
 		window.History.saveState()
@@ -351,8 +342,8 @@ window.Editor = {
 			name: uniqueName,
 			type: 'sprite-anim',
 			spriteName: spriteName,
-			currentAnim: '', // Will be set after loading
-			fps: 10,
+			currentAnim: '',
+			animSettings: {}, // Stores per-animation settings: { "animName": { fps: 10, stepX: 0, stepY: 0, resetLimit: 0 } }
 			parentId: parentId,
 			x: this.canvas.width / 2 - 32,
 			y: this.canvas.height / 2 - 32,
@@ -370,7 +361,9 @@ window.Editor = {
 				const animKeys = Object.keys(anims)
 				if (animKeys.length > 0) {
 					newObj.currentAnim = animKeys[0]
-					// Set size based on first frame
+					// Initialize default settings for the first animation
+					newObj.animSettings[newObj.currentAnim] = { fps: 10, stepX: 0, stepY: 0, resetLimit: 0 }
+					
 					const firstFrame = anims[newObj.currentAnim][0]
 					const path = `assets/sprite-animation/${spriteName}/${newObj.currentAnim}/${firstFrame}`
 					const img = this.images[path]
@@ -388,8 +381,6 @@ window.Editor = {
 		})
 	},
 	
-	// --- Rendering Loop ---
-	
 	gameLoop: function (timestamp) {
 		if (!this.data) {
 			requestAnimationFrame((t) => this.gameLoop(t))
@@ -404,8 +395,8 @@ window.Editor = {
 	
 	updateAnimations: function (dt) {
 		this.data.objects.forEach(obj => {
-			// Handle legacy sprites
 			if (obj.type === 'sprite') {
+				// Legacy sprite logic...
 				if (!this.animState[obj.id]) this.animState[obj.id] = { frameIndex: 0, timer: 0 }
 				const config = this.data.library.sprites[obj.spriteConfigId]
 				if (!config) return
@@ -420,21 +411,23 @@ window.Editor = {
 						state.frameIndex = anim.loop ? 0 : anim.frames.length - 1
 					}
 				}
-			}
-			// Handle NEW sprite-anim
-			else if (obj.type === 'sprite-anim') {
+			} else if (obj.type === 'sprite-anim') {
 				if (!this.animState[obj.id]) this.animState[obj.id] = { frameIndex: 0, timer: 0 }
 				const data = this.spriteData[obj.spriteName]
 				if (!data || !data[obj.currentAnim]) return
 				
+				// Get FPS from specific animation settings, default to 10
+				const settings = obj.animSettings[obj.currentAnim] || { fps: 10 }
+				const fps = settings.fps || 10
+				
 				const frameCount = data[obj.currentAnim].length
 				const state = this.animState[obj.id]
 				state.timer += dt
-				if (state.timer >= (1 / obj.fps)) {
+				if (state.timer >= (1 / fps)) {
 					state.timer = 0
 					state.frameIndex++
 					if (state.frameIndex >= frameCount) {
-						state.frameIndex = 0 // Loop by default
+						state.frameIndex = 0
 					}
 				}
 			}
@@ -493,6 +486,7 @@ window.Editor = {
 	},
 	
 	drawSprite: function (obj) {
+		// Legacy sprite draw logic
 		const config = this.data.library.sprites[obj.spriteConfigId]
 		if (!config) return
 		const img = this.images[config.sourceFile]
@@ -506,28 +500,40 @@ window.Editor = {
 		this.ctx.drawImage(img, col * config.frameWidth, row * config.frameHeight, config.frameWidth, config.frameHeight, obj.x, obj.y, obj.width, obj.height)
 	},
 	
-	// NEW: Draw function for sprite-anim type
 	drawSpriteAnim: function (obj) {
 		const data = this.spriteData[obj.spriteName]
 		if (!data || !data[obj.currentAnim]) return
 		
 		const frames = data[obj.currentAnim]
 		const state = this.animState[obj.id] || { frameIndex: 0 }
-		// Ensure index is safe
 		const idx = Math.min(state.frameIndex, frames.length - 1)
 		const frameFile = frames[idx]
 		
 		const path = `assets/sprite-animation/${obj.spriteName}/${obj.currentAnim}/${frameFile}`
 		const img = this.images[path]
 		
+		// Calculate Offset based on settings
+		const settings = obj.animSettings[obj.currentAnim] || { stepX: 0, stepY: 0, resetLimit: 0 }
+		const stepX = settings.stepX || 0
+		const stepY = settings.stepY || 0
+		const resetLimit = settings.resetLimit || 0
+		
+		// If resetLimit is 0, we might loop continuously or use frame count.
+		// Assuming 0 means "reset at end of animation" (modulo frame count)
+		const mod = resetLimit > 0 ? resetLimit : frames.length
+		const offsetMultiplier = state.frameIndex % mod
+		
+		const drawX = obj.x + (stepX * offsetMultiplier)
+		const drawY = obj.y + (stepY * offsetMultiplier)
+		
 		if (img) {
-			this.ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height)
+			this.ctx.drawImage(img, drawX, drawY, obj.width, obj.height)
 		} else {
-			// Lazy load if missing (though loadAssets should have caught it)
 			this.loadImage(path, path)
 		}
 	},
 	
+	// ... (Rest of the file remains unchanged) ...
 	drawGrid: function () {
 		const sz = this.data.meta.grid.size
 		this.ctx.beginPath(); this.ctx.strokeStyle = 'rgba(255,255,255,0.4)'
@@ -558,18 +564,14 @@ window.Editor = {
 		}
 	},
 	
-	// ... (Rest of object actions: fitObjectToScene, deleteObject, etc. remain unchanged) ...
 	fitObjectToScene: function (id) {
 		const obj = this.data.objects.find(o => o.id === id)
 		if (!obj || obj.type === 'folder') return
-		
 		window.History.saveState()
-		
 		const sceneW = this.data.meta.width
 		const sceneH = this.data.meta.height
 		const objRatio = obj.width / obj.height
 		const sceneRatio = sceneW / sceneH
-		
 		if (objRatio > sceneRatio) {
 			obj.width = sceneW; obj.height = sceneW / objRatio
 			obj.x = 0; obj.y = (sceneH - obj.height) / 2
@@ -587,14 +589,11 @@ window.Editor = {
 	
 	deleteSelected: async function () {
 		if (this.selectedIds.length === 0) return
-		
 		const confirmed = await this.confirm(`Delete ${this.selectedIds.length} item(s)?\n(Folders will be unwrapped, keeping contents)`)
 		if (confirmed) {
 			window.History.saveState()
-			
 			const foldersToDelete = []
 			const objectsToDelete = []
-			
 			this.selectedIds.forEach(id => {
 				const obj = this.data.objects.find(o => o.id === id)
 				if (obj) {
@@ -602,7 +601,6 @@ window.Editor = {
 					else objectsToDelete.push(obj.id)
 				}
 			})
-			
 			if (foldersToDelete.length > 0) {
 				this.data.objects.forEach(obj => {
 					if (foldersToDelete.includes(obj.parentId)) {
@@ -610,9 +608,7 @@ window.Editor = {
 					}
 				})
 			}
-			
 			this.data.objects = this.data.objects.filter(o => !this.selectedIds.includes(o.id))
-			
 			this.selectedIds = []
 			window.PropertiesPanel.update()
 			window.Treeview.render()
@@ -627,18 +623,14 @@ window.Editor = {
 	
 	groupSelected: async function () {
 		if (this.selectedIds.length < 2) return
-		
 		let groupIndex = 1
 		while (this.data.objects.some(o => o.name === `group${groupIndex}`)) {
 			groupIndex++
 		}
 		const defaultName = `group${groupIndex}`
-		
 		const name = await this.prompt('Enter group name:', defaultName)
 		if (!name) return
-		
 		window.History.saveState()
-		
 		const newFolder = {
 			id: 'folder_' + Date.now(),
 			name: name,
@@ -648,17 +640,13 @@ window.Editor = {
 			visible: true,
 			locked: false
 		}
-		
 		const firstObj = this.data.objects.find(o => o.id === this.selectedIds[0])
 		if (firstObj) newFolder.parentId = firstObj.parentId
-		
 		this.data.objects.push(newFolder)
-		
 		this.selectedIds.forEach(id => {
 			const obj = this.data.objects.find(o => o.id === id)
 			if (obj) obj.parentId = newFolder.id
 		})
-		
 		this.selectedIds = [newFolder.id]
 		window.Treeview.render()
 		window.PropertiesPanel.update()

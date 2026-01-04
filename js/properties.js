@@ -127,7 +127,17 @@ window.PropertiesPanel = {
 		// Handle Sprite Animation Specifics
 		if (isSpriteAnim) {
 			spriteGroup.style.display = 'block'
-			document.getElementById('inp-obj-fps').value = obj.fps
+			
+			// Ensure settings object exists
+			if (!obj.animSettings) obj.animSettings = {}
+			
+			// Get settings for current animation, default to standard values if missing
+			const currentSettings = obj.animSettings[obj.currentAnim] || { fps: 10, stepX: 0, stepY: 0, resetLimit: 0 }
+			
+			document.getElementById('inp-obj-fps').value = currentSettings.fps || 10
+			document.getElementById('inp-obj-step-x').value = currentSettings.stepX || 0
+			document.getElementById('inp-obj-step-y').value = currentSettings.stepY || 0
+			document.getElementById('inp-obj-reset-limit').value = currentSettings.resetLimit || 0
 			
 			// Populate Animation Dropdown
 			const animSelect = document.getElementById('sel-obj-anim')
@@ -205,9 +215,15 @@ window.PropertiesPanel = {
 		
 		if (key === 'name' || key === 'zIndex') window.Treeview.render()
 		
-		// If changing animation, reset frame index
+		// If changing animation, reset frame index and update view to show new settings
 		if (key === 'currentAnim') {
 			window.Editor.animState[obj.id] = { frameIndex: 0, timer: 0 }
+			// Ensure settings entry exists for the new animation
+			if (!obj.animSettings[val]) {
+				obj.animSettings[val] = { fps: 10, stepX: 0, stepY: 0, resetLimit: 0 }
+			}
+			this.update() // Force update to refresh FPS/Step inputs for the new animation
+			return
 		}
 		
 		if (isContinuous) {
@@ -216,12 +232,32 @@ window.PropertiesPanel = {
 			}
 			window.Editor.render()
 		} else {
-			// Only re-render full panel if NOT changing animation (to prevent dropdown flicker)
 			if (key !== 'currentAnim') {
 				this.update()
 			}
 			window.Editor.render()
 		}
+	},
+	
+	// NEW: Update specific settings for the current animation
+	updateSpriteSetting: function (key, val) {
+		if (window.Editor.selectedIds.length !== 1) return
+		const id = window.Editor.selectedIds[0]
+		const obj = window.Editor.data.objects.find(o => o.id === id)
+		if (!obj || obj.type !== 'sprite-anim') return
+		
+		window.History.saveState()
+		
+		// Ensure settings object exists
+		if (!obj.animSettings) obj.animSettings = {}
+		if (!obj.animSettings[obj.currentAnim]) {
+			obj.animSettings[obj.currentAnim] = { fps: 10, stepX: 0, stepY: 0, resetLimit: 0 }
+		}
+		
+		obj.animSettings[obj.currentAnim][key] = val
+		
+		// No need to full update(), just render to see FPS/Offset changes
+		window.Editor.render()
 	},
 	
 	updateObjPropPct: function (key, pctVal) {

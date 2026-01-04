@@ -17,7 +17,6 @@
 			<button id="btn-save-as" type="button">💾 Save As...</button>
 			<button id="btn-new-scene" type="button" title="Clear Scene">📄 New</button>
 			<button id="btn-assets-modal" type="button">🖼️ Assets</button>
-			<!-- NEW: Sprite Button -->
 			<button id="btn-sprites-modal" type="button">👾 Sprites</button>
 			<span class="separator">|</span>
 			<button id="btn-duplicate" type="button" title="Duplicate Selected (Ctrl+D)">📄 Duplicate</button>
@@ -120,7 +119,7 @@
 					</label>
 				</div>
 				
-				<!-- NEW: Sprite Animation Settings -->
+				<!-- Sprite Animation Settings -->
 				<div id="grp-obj-sprite" style="display:none; border-top:1px solid #444; margin-top:10px; padding-top:10px;">
 					<div class="prop-row">
 						<label for="sel-obj-anim">Animation</label>
@@ -128,7 +127,22 @@
 					</div>
 					<div class="prop-row">
 						<label for="inp-obj-fps">FPS</label>
-						<input type="number" id="inp-obj-fps" min="1" max="60" onchange="PropertiesPanel.updateObjProp('fps', Number(this.value))">
+						<input type="number" id="inp-obj-fps" min="1" max="60" onchange="PropertiesPanel.updateSpriteSetting('fps', Number(this.value))">
+					</div>
+					<!-- New Inputs for Animation Offsets -->
+					<div class="prop-row-dual">
+						<div>
+							<label for="inp-obj-step-x">Step X</label>
+							<input type="number" id="inp-obj-step-x" onchange="PropertiesPanel.updateSpriteSetting('stepX', Number(this.value))">
+						</div>
+						<div>
+							<label for="inp-obj-step-y">Step Y</label>
+							<input type="number" id="inp-obj-step-y" onchange="PropertiesPanel.updateSpriteSetting('stepY', Number(this.value))">
+						</div>
+					</div>
+					<div class="prop-row">
+						<label for="inp-obj-reset-limit" title="Reset offsets after this many frames (0 = loop length)">Reset Limit</label>
+						<input type="number" id="inp-obj-reset-limit" min="0" onchange="PropertiesPanel.updateSpriteSetting('resetLimit', Number(this.value))">
 					</div>
 				</div>
 				
@@ -266,7 +280,7 @@
 	</div>
 </div>
 
-<!-- NEW: Sprite Browser Modal -->
+<!-- Sprite Browser Modal -->
 <div id="modal-sprites" class="modal">
 	<div class="modal-content large">
 		<span class="close" role="button" tabindex="0">&times;</span>
@@ -300,7 +314,7 @@
 </dialog>
 
 <script src="js/assets.js"></script>
-<script src="js/sprite_browser.js"></script> <!-- NEW -->
+<script src="js/sprite_browser.js"></script>
 <script src="js/history.js"></script>
 <script src="js/properties.js"></script>
 <script src="js/treeview.js"></script>
