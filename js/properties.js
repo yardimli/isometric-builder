@@ -351,13 +351,27 @@ window.PropertiesPanel = {
 				subLabel = (item.limit > 0) ? `${item.limit} steps` : 'Infinite';
 			}
 			
+			const isFirst = index === 0;
+			const isLast = index === obj.sequence.length - 1;
+			
+			// Button styles
+			const btnStyle = 'background:#444; border:1px solid #555; color:#ccc; cursor:pointer; padding:2px 5px; font-size:10px;';
+			const btnDisabledStyle = 'background:#333; border:1px solid #444; color:#666; cursor:default; padding:2px 5px; font-size:10px; opacity:0.5;';
+			
 			row.innerHTML = `
         <span style="font-size:11px; color:#888; width:15px;">${index + 1}.</span>
         <span style="flex:1; font-size:12px;">${label}</span>
         <span style="font-size:11px; color:#aaa;">(${subLabel})</span>
-        <button class="btn-seq-edit" style="background:#007acc; border:none; color:white; cursor:pointer; padding:2px 6px; margin-right:2px;">✎</button>
-        <button class="btn-seq-del" style="background:#a31515; border:none; color:white; cursor:pointer; padding:2px 6px;">x</button>
+        <div style="display:flex; gap:2px;">
+            <button class="btn-seq-up" style="${isFirst ? btnDisabledStyle : btnStyle}" ${isFirst ? 'disabled' : ''}>▲</button>
+            <button class="btn-seq-down" style="${isLast ? btnDisabledStyle : btnStyle}" ${isLast ? 'disabled' : ''}>▼</button>
+            <button class="btn-seq-edit" style="background:#007acc; border:none; color:white; cursor:pointer; padding:2px 6px; margin-left:2px;">✎</button>
+            <button class="btn-seq-del" style="background:#a31515; border:none; color:white; cursor:pointer; padding:2px 6px;">x</button>
+        </div>
       `;
+			
+			row.querySelector('.btn-seq-up').onclick = () => this.moveSequenceStep(index, -1);
+			row.querySelector('.btn-seq-down').onclick = () => this.moveSequenceStep(index, 1);
 			
 			row.querySelector('.btn-seq-edit').onclick = () => {
 				this.editSequenceStep(index, item);
@@ -369,6 +383,31 @@ window.PropertiesPanel = {
 			
 			list.appendChild(row);
 		});
+	},
+	
+	moveSequenceStep: function (index, direction) {
+		if (window.Editor.selectedIds.length !== 1) return;
+		const id = window.Editor.selectedIds[0];
+		const obj = window.Editor.data.objects.find(o => o.id === id);
+		if (!obj) return;
+		
+		const newIndex = index + direction;
+		if (newIndex < 0 || newIndex >= obj.sequence.length) return;
+		
+		window.History.saveState();
+		
+		// Cancel editing if moving to avoid index mismatch
+		if (this.editingSequenceIndex !== -1) {
+			this.cancelEdit();
+		}
+		
+		// Swap elements
+		const temp = obj.sequence[index];
+		obj.sequence[index] = obj.sequence[newIndex];
+		obj.sequence[newIndex] = temp;
+		
+		if (window.SpriteAnimator) window.SpriteAnimator.resetState(obj.id);
+		this.update();
 	},
 	
 	addSequenceStep: function () {
